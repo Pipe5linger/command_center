@@ -1,0 +1,289 @@
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 60719)
+Traceback (most recent call last):
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 317, in _handle_request_noblock
+    self.process_request(request, client_address)
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 348, in process_request
+    self.finish_request(request, client_address)
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 671, in __init__
+    super().__init__(*args, **kwargs)
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 436, in handle
+    self.handle_one_request()
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 58089)
+Traceback (most recent call last):
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 317, in _handle_request_noblock
+    self.process_request(request, client_address)
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 348, in process_request
+    self.finish_request(request, client_address)
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 671, in __init__
+    super().__init__(*args, **kwargs)
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 436, in handle
+    self.handle_one_request()
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+----------------------------------------
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 64624)
+Traceback (most recent call last):
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 317, in _handle_request_noblock
+    self.process_request(request, client_address)
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 348, in process_request
+    self.finish_request(request, client_address)
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 671, in __init__
+    super().__init__(*args, **kwargs)
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 436, in handle
+    self.handle_one_request()
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+----------------------------------------
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 53839)
+Traceback (most recent call last):
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 317, in _handle_request_noblock
+    self.process_request(request, client_address)
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 348, in process_request
+    self.finish_request(request, client_address)
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 671, in __init__
+    super().__init__(*args, **kwargs)
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 436, in handle
+    self.handle_one_request()
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+----------------------------------------
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 53699)
+Traceback (most recent call last):
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 317, in _handle_request_noblock
+    self.process_request(request, client_address)
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 348, in process_request
+    self.finish_request(request, client_address)
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 671, in __init__
+    super().__init__(*args, **kwargs)
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 436, in handle
+    self.handle_one_request()
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+----------------------------------------
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+============================================================
+  [*] Sanctuary Command Center (SCC) Server Active
+  Dashboard Port:  http://localhost:9999
+  LLM Models Folder: D:\AI\Models\LLM
+============================================================
+get_system_stats: 1.4074573516845703
+get_gpu_stats: 0.10056614875793457
+get_disk_stats: 0.0
+get_process_list: 0.21681785583496094
+Import time: 0.04591035842895508
+['APPS', 'DashboardHandler', 'EXPLORER_SHORTCUTS', 'FORGE_DIR', 'HTML_UI', 'HTTPServer', 'KOBOLD_EXE', 'LAUNCHERS_DIR', 'LLM_DIR', 'MAX_LOG_LINES', 'OLLAMA_URL', 'PORT', 'SimpleHTTPRequestHandler', '__builtins__', '__cached__', '__doc__', '__file__', '__loader__', '__name__', '__package__', '__spec__', '_append_log', '_log', '_log_path', '_pipe_reader', '_terminal_lock', '_terminal_logs', 'base64', 'check_port_active', 'ctypes', 'get_disk_stats', 'get_gpu_stats', 'get_ollama_models', 'get_process_list', 'get_system_stats', 'json', 'main', 'ollama_generate', 'os', 'query_everything_search', 'queue', 'scan_ggufs', 'socket', 'subprocess', 'sys', 'threading', 'time', 'urllib']
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 61870)
+Traceback (most recent call last):
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 317, in _handle_request_noblock
+    self.process_request(request, client_address)
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 348, in process_request
+    self.finish_request(request, client_address)
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 671, in __init__
+    super().__init__(*args, **kwargs)
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 436, in handle
+    self.handle_one_request()
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+----------------------------------------
