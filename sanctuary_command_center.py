@@ -1128,6 +1128,17 @@ HTML_UI = """<!DOCTYPE html>
             if (tabId === 'launchers') loadLaunchers();
             if (tabId === 'terminals') pollTerminals();
             if (tabId === 'prompt') fetchOllamaModels();
+            if (tabId === 'home') {
+                document.getElementById('dashboard').style.display = 'block'; // Or 'flex' depending on CSS
+                document.getElementById('modules').style.display = 'block'; // Example: show modules
+_                document.getElementById('system-health-section').style.display = 'flex'; // Show system health
+                document.getElementById('recent-tasks-section').style.display = 'block'; // Show recent tasks
+            } else {
+                document.getElementById('dashboard').style.display = 'none'; // Hide dashboard for other tabs
+                document.getElementById('system-health-section').style.display = 'none';
+                document.getElementById('recent-tasks-section').style.display = 'none';
+            }
+
             if (tabId === 'curator') { fetchOllamaModels(); populateSdcVlmModels(); }
         }
 
@@ -1465,6 +1476,80 @@ HTML_UI = """<!DOCTYPE html>
                 if (d.error) throw new Error(d.error);
                 document.getElementById('promptPositive').textContent = d.positive || '(empty)';
                 document.getElementById('promptNegative').textContent = d.negative || '(empty)';
+        // ============================================================
+        //  TELEMETRY DISPLAY AND POLLING
+        // ============================================================
+        function updateTelemetryDisplay(extraction, harvest, apps) { // Combined function
+            // Update extraction status
+            const extractionStatusEl = document.getElementById('extraction-status');
+            if (extractionStatusEl) {
+                extractionStatusEl.innerHTML = `
+                    <p>Running: ${extraction.running}</p>
+                    <p>Progress: ${extraction.progress}/${extraction.total}</p>
+                    <p>Saved: ${extraction.saved}</p>
+                    <p>Message: ${extraction.msg}</p>
+                `;
+            }
+
+            // Update harvest status
+            const harvestStatusEl = document.getElementById('harvest-status');
+            if (harvestStatusEl) {
+                harvestStatusEl.innerHTML = `
+                    <p>Running: ${harvest.running}</p>
+                    <p>Progress: ${harvest.progress}</p>
+                    <p>Message: ${harvest.msg}</p>
+                `;
+            }
+
+            // Update app statuses (existing logic)
+            for (const appName in apps) {
+                const app = apps[appName];
+                const el = document.getElementById(`status-${appName}`); // Ensure elements like <span id="status-forge"> exist
+                if (el) {
+                    el.textContent = app.running ? 'Running' : 'Stopped';
+                    el.className = app.running ? 'status-running' : 'status-stopped';
+                }
+            }
+        }
+        
+        async function fetchStats() {
+            try {
+                const [extractionRes, harvestRes, appStatusRes] = await Promise.all([
+                    fetch('/api/status/extraction'),
+                    fetch('/api/status/harvest'),
+                    fetch('/api/app_status')
+                ]);
+                const extraction = await extractionRes.json();
+                const harvest = await harvestRes.json();
+                const appStatus = await appStatusRes.json();
+
+                updateTelemetryDisplay(extraction, harvest, appStatus);
+            } catch (e) {
+                console.error('Failed to fetch telemetry stats:', e);
+            }
+        }
+
+        // Get and render latest logs
+        async function fetchAndRenderLatestLogs() {
+            try {
+                const res = await fetch('/api/latest_logs');
+                const logs = await res.json();
+                const latestTasksList = document.getElementById('latestTasksList');
+                if (latestTasksList) {
+                    latestTasksList.innerHTML = ''; // Clear previous logs
+                    // logs is an object like { 'terminal.server': [...lines], ... }
+                    // For now, let's just display the last few lines of 'terminal.server'
+                    const serverLogs = logs['terminal.server'] || [];
+                    serverLogs.slice(-5).reverse().forEach(line => { // Display last 5 lines, newest first
+                        const li = document.createElement('li');
+                        li.textContent = line;
+                        latestTasksList.appendChild(li);
+                    });
+                }
+            } catch (e) {
+                console.error('Failed to fetch latest logs:', e);
+            }
+        }
                 document.getElementById('promptLog').textContent = 'Done. Model: ' + model + ' | Tokens: ~' + ((d.positive || '').split(',').length + (d.negative || '').split(',').length) + ' tags.';
                 showToast('Prompt generated!', 'var(--success)');
             } catch(err) {
@@ -1818,7 +1903,11 @@ HTML_UI = """<!DOCTYPE html>
                     tr.innerHTML =
                         '<td style="color:var(--text-primary);font-weight:600">' + r.name + '</td>' +
                         '<td>' + r.size + '</td>' +
+        setInterval(fetchAndRenderLatestLogs, 5000);
+
                         '<td style="color:var(--text-muted)">' + r.path + '</td>' +
+        fetchAndRenderLatestLogs();
+
                         '<td style="text-align:right"><button onclick="handleShowClick(this)" style="padding:3px 8px;font-size:10px">Show</button></td>';
                     tb.appendChild(tr);
                 });
@@ -1829,11 +1918,13 @@ HTML_UI = """<!DOCTYPE html>
         //  INIT
         // ============================================================
         setInterval(fetchStats, 3000);
+        setInterval(fetchAndRenderLatestLogs, 5000);
         setInterval(() => {
             if (document.getElementById('tabContent-terminals').classList.contains('active')) pollTerminals();
         }, 4000);
 
         fetchStats();
+        fetchAndRenderLatestLogs();
         fetchModels();
         loadExplorerShortcuts();
         fetchOllamaModels();
