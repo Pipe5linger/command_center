@@ -13,7 +13,12 @@ import threading
 import queue
 import time
 import base64
+import cv2
+import imagehash
+from PIL import Image
+import shutil
 from http.server import HTTPServer, SimpleHTTPRequestHandler
+
 
 # Redirect stdout/stderr to log file for silent operation
 _log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'scc_server.log')
@@ -30,6 +35,14 @@ KOBOLD_EXE = r"D:\AI\Projects\KoboldCpp\koboldcpp.exe"
 FORGE_DIR = r"D:\AI\Projects\stable-diffusion-webui-forge"
 LAUNCHERS_DIR = r"D:\AI\Launchers"
 OLLAMA_URL = "http://localhost:11434"
+
+PYTHONW_EXE   = r"D:\AI\Projects\stable-diffusion-webui-forge\venv\Scripts\pythonw.exe"
+PICKER_HELPER  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "picker_helper.py")
+
+extraction_status = {"running": False, "paused": False, "stopped": False, "progress": 0, "total": 0, "saved": 0, "msg": "Idle"}
+harvest_status = {"running": False, "progress": "", "msg": "Idle"}
+ocr_reader = None
+
 
 EXPLORER_SHORTCUTS = [
     {"name": "ComfyUI Workspace",       "path": r"D:\AI\Projects\ComfyUI"},
@@ -156,9 +169,9 @@ def get_system_stats():
             free_kb = int(ram_data.get("FreePhysicalMemory", 0))
             if total_kb > 0:
                 used_kb = total_kb - free_kb
-                stats["ram_total_gb"] = round(total_kb / (1024**2), 1)
-                stats["ram_used_gb"]  = round(used_kb  / (1024**2), 1)
-                stats["ram_pct"]      = round((used_kb / total_kb) * 100, 1)
+                stats["ram_total_gb"] = round(total_kb / (1024**2), 0)
+                stats["ram_used_gb"]  = round(used_kb  / (1024**2), 0)
+                stats["ram_pct"]      = round((used_kb / total_kb) * 100, 0)
     except Exception:
         pass
     return stats
@@ -846,28 +859,135 @@ HTML_UI = """<!DOCTYPE html>
          TAB 4: DATASET CURATOR
     ================================================================ -->
     <div class="tab-content" id="tabContent-curator">
-        <div class="sdc-grid">
-            <!-- Controls Panel -->
+        <!-- Sub-Tabs Navigation -->
+        <div style="display:flex;gap:10px;margin-bottom:15px;border-bottom:1px solid var(--border);padding-bottom:10px">
+            <button class="btn-cyan sub-tab-btn active" id="sub-tab-ingest" onclick="switchSubTab('ingest')">📥 Ingest</button>
+            <button class="btn-cyan sub-tab-btn" id="sub-tab-stage" onclick="switchSubTab('stage')">⚡ Stage</button>
+            <button class="btn-cyan sub-tab-btn" id="sub-tab-curate" onclick="switchSubTab('curate')">🏷️ Curate</button>
+        </div>
+
+        <!-- SUB-TAB: INGEST -->
+        <div id="subTabContent-ingest" class="sub-tab-content sdc-grid" style="display:grid">
+            <!-- Video Harvester -->
+            <div class="sdc-panel">
+                <div class="panel">
+                    <div class="panel-title"><span>Video Harvester (SVD)</span></div>
+                    <div style="display:flex;flex-direction:column;gap:10px">
+                        <div style="display:flex;gap:6px">
+                            <input type="text" id="harvestQuery" placeholder="Enter video URL" style="flex:1">
+                            <button class="btn-primary" onclick="harvestInspect()">Inspect</button>
+                        </div>
+                        <div id="harvestWorkspace" style="display:none;gap:10px;background:rgba(255,255,255,0.05);padding:10px;border-radius:6px">
+                            <img id="harvestThumb" src="" style="width:80px;height:45px;object-fit:cover;border-radius:4px">
+                            <div style="flex:1;overflow:hidden">
+                                <div id="harvestTitle" style="font-size:12px;font-weight:bold;text-overflow:ellipsis;white-space:nowrap;overflow:hidden">Title</div>
+                                <div id="harvestDuration" style="font-size:11px;color:var(--text-muted)">0:00</div>
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:6px">
+                            <select id="harvestQuality" style="flex:1">
+                                <option value="best_mp4">Best Native MP4</option>
+                                <option value="best_mkv">Max Quality MKV</option>
+                            </select>
+                            <label style="display:flex;align-items:center;gap:4px;font-size:11px">
+                                <input type="checkbox" id="harvestAudioOnly"> Audio Only
+                            </label>
+                        </div>
+                        <div style="display:flex;gap:6px">
+                            <input type="text" id="harvestStart" placeholder="Start HH:MM:SS" style="flex:1">
+                            <input type="text" id="harvestEnd" placeholder="End HH:MM:SS" style="flex:1">
+                        </div>
+                        <div style="display:flex;gap:6px">
+                            <input type="text" id="harvestOutputFolder" value="D:\AI\Downloads" placeholder="Download folder" style="flex:1">
+                            <button class="btn-primary" onclick="pickFolderToInput('harvestOutputFolder')">📁</button>
+                        </div>
+                        <button class="btn-cyan" id="harvestBtn" onclick="harvestStart()">Harvest Video</button>
+                        <div id="harvestStatus" style="font-size:11px;color:var(--text-muted)">Ready.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video Frame Extractor -->
+            <div class="sdc-panel">
+                <div class="panel">
+                    <div class="panel-title"><span>Frame Extractor (SDC)</span></div>
+                    <div style="display:flex;flex-direction:column;gap:10px">
+                        <div style="display:flex;gap:6px">
+                            <input type="text" id="extractorVideoPath" placeholder="Source video file path" style="flex:1">
+                            <button class="btn-primary" onclick="pickFileToInput('extractorVideoPath')">🎬</button>
+                        </div>
+                        <div style="display:flex;gap:6px">
+                            <input type="text" id="extractorOutputFolder" value="D:\AI\Projects\ComfyUI\input\Amy_Master" placeholder="Extraction destination" style="flex:1">
+                            <button class="btn-primary" onclick="pickFolderToInput('extractorOutputFolder')">📁</button>
+                        </div>
+                        <div style="display:flex;gap:6px;align-items:center">
+                            <select id="extractorType" style="flex:1">
+                                <option value="time">Interval (seconds)</option>
+                                <option value="frames">Frame Step (frames)</option>
+                            </select>
+                            <input type="number" id="extractorValue" value="1.0" step="0.1" style="width:70px">
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:4px;font-size:12px">
+                            <label><input type="checkbox" id="extractorEnableDedup" checked> Perceptual Deduplication (threshold: 12)</label>
+                            <label><input type="checkbox" id="extractorExcludeText"> Exclude frames with text (OCR)</label>
+                        </div>
+                        <div style="display:flex;gap:6px">
+                            <button class="btn-cyan" id="extractorStartBtn" onclick="extractorStart()">Extract & Stage</button>
+                            <button class="btn-primary" onclick="extractorControl('pause')">Pause</button>
+                            <button class="btn-primary" onclick="extractorControl('resume')">Resume</button>
+                            <button class="btn-primary" onclick="extractorControl('stop')">Stop</button>
+                        </div>
+                        <div id="extractorStatus" style="font-size:11px;color:var(--text-muted)">Ready.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SUB-TAB: STAGE -->
+        <div id="subTabContent-stage" class="sub-tab-content sdc-grid" style="display:none">
+            <!-- Left panel: Scan & Stats -->
             <div class="sdc-panel">
                 <div class="panel">
                     <div class="panel-title"><span>Scan Directory</span></div>
                     <div style="display:flex;flex-direction:column;gap:10px">
-                        <div style="display:flex;flex-direction:column;gap:6px">
-                            <label>Source Path</label>
-                            <input type="text" id="sdcPath" value="D:\AI\Projects\ComfyUI\input\Amy_Master" style="width:100%">
+                        <div style="display:flex;gap:6px">
+                            <input type="text" id="sdcPath" value="D:\AI\Projects\ComfyUI\input\Amy_Master" style="flex:1">
+                            <button class="btn-primary" onclick="pickFolderToInput('sdcPath')">📁</button>
                         </div>
                         <button class="btn-primary" onclick="sdcScan()">Scan for Images</button>
                         <div id="sdcScanStatus" style="font-size:11px;color:var(--text-muted)">Ready.</div>
                     </div>
                 </div>
+            </div>
 
+            <!-- Right panel: Gallery -->
+            <div class="sdc-panel">
+                <div class="panel" style="flex:1">
+                    <div class="panel-title">
+                        <span>Image Gallery</span>
+                        <span id="sdcImageCount" style="font-size:11px;color:var(--text-muted)">0 images</span>
+                    </div>
+                    <div class="image-gallery" id="sdcGallery">
+                        <div style="color:var(--text-muted);font-size:13px;grid-column:1/-1;text-align:center;padding:40px">Scan a directory to load images.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SUB-TAB: CURATE -->
+        <div id="subTabContent-curate" class="sub-tab-content sdc-grid" style="display:none">
+            <!-- Left Panel: Preview -->
+            <div class="sdc-panel">
                 <div class="panel">
                     <div class="panel-title"><span>Selected Image</span></div>
                     <div id="sdcSelectedPreview" style="text-align:center;padding:20px;color:var(--text-muted)">
                         No image selected.
                     </div>
                 </div>
+            </div>
 
+            <!-- Right Panel: VLM Auto-Tag -->
+            <div class="sdc-panel">
                 <div class="panel">
                     <div class="panel-title"><span>VLM Auto-Tag</span></div>
                     <div style="display:flex;flex-direction:column;gap:10px">
@@ -881,19 +1001,6 @@ HTML_UI = """<!DOCTYPE html>
                         </div>
                         <button class="btn-cyan" onclick="sdcTagSelected()" id="sdcTagBtn">Tag Selected Image</button>
                         <div id="sdcTagOutput" class="prompt-output" style="min-height:80px;color:var(--accent-cyan)">--</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Gallery Panel -->
-            <div class="sdc-panel">
-                <div class="panel" style="flex:1">
-                    <div class="panel-title">
-                        <span>Image Gallery</span>
-                        <span id="sdcImageCount" style="font-size:11px;color:var(--text-muted)">0 images</span>
-                    </div>
-                    <div class="image-gallery" id="sdcGallery">
-                        <div style="color:var(--text-muted);font-size:13px;grid-column:1/-1;text-align:center;padding:40px">Scan a directory to load images.</div>
                     </div>
                 </div>
             </div>
@@ -1023,6 +1130,149 @@ HTML_UI = """<!DOCTYPE html>
             if (tabId === 'prompt') fetchOllamaModels();
             if (tabId === 'curator') { fetchOllamaModels(); populateSdcVlmModels(); }
         }
+
+        // ============================================================
+        //  SDC / SVD STUDIO ACTIONS
+        // ============================================================
+        function switchSubTab(subTabId) {
+            document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.sub-tab-content').forEach(c => c.style.display = 'none');
+            const btn = document.getElementById('sub-tab-' + subTabId);
+            if (btn) btn.classList.add('active');
+            const content = document.getElementById('subTabContent-' + subTabId);
+            if (content) content.style.display = 'grid';
+        }
+
+        async function pickFolderToInput(inputId) {
+            try {
+                const res = await fetch('/api/select-folder', { method: 'POST' });
+                const d = await res.json();
+                if (d.path) {
+                    document.getElementById(inputId).value = d.path;
+                    showToast('Folder selected', 'var(--success)');
+                }
+            } catch(e) { showToast('Picker failed', 'var(--danger)'); }
+        }
+
+        async function pickFileToInput(inputId) {
+            try {
+                const res = await fetch('/api/select-file', { method: 'POST' });
+                const d = await res.json();
+                if (d.path) {
+                    document.getElementById(inputId).value = d.path;
+                    showToast('File selected', 'var(--success)');
+                }
+            } catch(e) { showToast('Picker failed', 'var(--danger)'); }
+        }
+
+        async function harvestInspect() {
+            const url = document.getElementById('harvestQuery').value.trim();
+            if (!url) { showToast('Please enter a URL', 'var(--danger)'); return; }
+            showToast('Querying metadata...', 'var(--accent-blue)');
+            try {
+                const res = await fetch('/api/inspect-formats', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ url })
+                });
+                const d = await res.json();
+                if (d.error) { showToast(d.error, 'var(--danger)'); return; }
+                
+                document.getElementById('harvestTitle').textContent = d.title;
+                document.getElementById('harvestDuration').textContent = Math.round(d.duration) + 's';
+                document.getElementById('harvestThumb').src = d.thumbnail;
+                document.getElementById('harvestWorkspace').style.display = 'flex';
+                showToast('Formats loaded', 'var(--success)');
+            } catch(e) { showToast('Failed to inspect formats', 'var(--danger)'); }
+        }
+
+        async function harvestStart() {
+            const url = document.getElementById('harvestQuery').value.trim();
+            const outputFolder = document.getElementById('harvestOutputFolder').value.trim();
+            const resolution = document.getElementById('harvestQuality').value;
+            const audioOnly = document.getElementById('harvestAudioOnly').checked;
+            const startTime = document.getElementById('harvestStart').value.trim();
+            const endTime = document.getElementById('harvestEnd').value.trim();
+
+            if (!url || !outputFolder) { showToast('Missing URL or folder', 'var(--danger)'); return; }
+            showToast('Starting harvest...', 'var(--accent-blue)');
+            try {
+                const res = await fetch('/api/download', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ url, outputFolder, resolution, audioOnly, startTime, endTime })
+                });
+                const d = await res.json();
+                if (d.error) { showToast(d.error, 'var(--danger)'); }
+                else {
+                    showToast('Harvest started! Monitor logs.', 'var(--success)');
+                    pollHarvestStatus();
+                }
+            } catch(e) { showToast('Failed to start harvest', 'var(--danger)'); }
+        }
+
+        let harvestPollTimer = null;
+        async function pollHarvestStatus() {
+            if (harvestPollTimer) clearTimeout(harvestPollTimer);
+            try {
+                const res = await fetch('/api/harvest-status');
+                const d = await res.json();
+                const statusDiv = document.getElementById('harvestStatus');
+                statusDiv.textContent = d.msg;
+                if (d.running) {
+                    harvestPollTimer = setTimeout(pollHarvestStatus, 2000);
+                }
+            } catch(e) {}
+        }
+
+        async function extractorStart() {
+            const videoPath = document.getElementById('extractorVideoPath').value.trim();
+            const outputFolder = document.getElementById('extractorOutputFolder').value.trim();
+            const extractionType = document.getElementById('extractorType').value;
+            const extractionValue = document.getElementById('extractorValue').value;
+            const enableDedup = document.getElementById('extractorEnableDedup').checked;
+            const excludeText = document.getElementById('extractorExcludeText').checked;
+
+            if (!videoPath || !outputFolder) { showToast('Missing video path or folder', 'var(--danger)'); return; }
+            showToast('Starting extraction...', 'var(--accent-blue)');
+            try {
+                const res = await fetch('/api/extract', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ videoPath, outputFolder, extractionType, extractionValue, enableDedup, excludeText })
+                });
+                const d = await res.json();
+                if (d.error) { showToast(d.error, 'var(--danger)'); }
+                else {
+                    showToast('Extraction started! Monitor logs.', 'var(--success)');
+                    pollExtractorStatus();
+                }
+            } catch(e) { showToast('Failed to start extraction', 'var(--danger)'); }
+        }
+
+        async function extractorControl(action) {
+            try {
+                const res = await fetch('/api/extract-' + action, { method: 'POST' });
+                const d = await res.json();
+                showToast('Extractor action: ' + action, 'var(--success)');
+                pollExtractorStatus();
+            } catch(e) { showToast('Control failed', 'var(--danger)'); }
+        }
+
+        let extractorPollTimer = null;
+        async function pollExtractorStatus() {
+            if (extractorPollTimer) clearTimeout(extractorPollTimer);
+            try {
+                const res = await fetch('/api/extract-status');
+                const d = await res.json();
+                const statusDiv = document.getElementById('extractorStatus');
+                statusDiv.textContent = d.msg + ` [Progress: ${d.progress}/${d.total}, Saved: ${d.saved}]`;
+                if (d.running) {
+                    extractorPollTimer = setTimeout(pollExtractorStatus, 2000);
+                }
+            } catch(e) {}
+        }
+
 
         // ============================================================
         //  STATS POLLING
@@ -1398,9 +1648,10 @@ HTML_UI = """<!DOCTYPE html>
                     const ext = item.filename.split('.').pop();
                     const card = document.createElement('div');
                     card.className = 'launcher-card';
+                    card.setAttribute('data-filename', item.filename);
                     card.innerHTML =
                         '<div><div class="launcher-title">' + item.name + '</div><div class="launcher-ext">' + ext + '</div></div>' +
-                        '<button class="btn-primary" onclick="launchFile(\'' + item.filename.replace(/'/g, "\\'") + '\')" style="width:100%">Execute</button>';
+                        '<button class="btn-primary" onclick="handleLauncherClick(this)" style="width:100%">Execute</button>';
                     con.appendChild(card);
                 });
             } catch(e) {}
@@ -1412,6 +1663,12 @@ HTML_UI = """<!DOCTYPE html>
                 const d = await res.json();
                 showToast('Launched: ' + filename, 'var(--success)');
             } catch(e) { showToast('Launch failed', 'var(--danger)'); }
+        }
+
+        function handleLauncherClick(el) {
+            const card = el.closest('[data-filename]');
+            const fn = card.getAttribute('data-filename');
+            launchFile(fn);
         }
 
         async function openLaunchersFolder() {
@@ -1585,6 +1842,245 @@ HTML_UI = """<!DOCTYPE html>
 </html>
 """
 
+def _run_folder_picker() -> str:
+    import tempfile
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".txt", mode='w')
+    tmp_path = tmp.name
+    tmp.close()
+
+    args = [PYTHONW_EXE, PICKER_HELPER, "folder", tmp_path]
+    si = subprocess.STARTUPINFO()
+    si.lpDesktop = "winsta0\\default"
+    proc = subprocess.Popen(args, startupinfo=si, close_fds=True)
+    proc.wait(timeout=120)
+
+    try:
+        with open(tmp_path, 'r', encoding='utf-8') as f:
+            path = f.read().strip()
+        os.unlink(tmp_path)
+        return path.replace("\\", "/")
+    except Exception:
+        return ""
+
+def _run_file_picker(filter_arg: str = "") -> str:
+    import tempfile
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".txt", mode='w')
+    tmp_path = tmp.name
+    tmp.close()
+
+    args = [PYTHONW_EXE, PICKER_HELPER, "file", tmp_path]
+    if filter_arg:
+        args.append(filter_arg)
+
+    si = subprocess.STARTUPINFO()
+    si.lpDesktop = "winsta0\\default"
+    proc = subprocess.Popen(args, startupinfo=si, close_fds=True)
+    proc.wait(timeout=120)
+
+    try:
+        with open(tmp_path, 'r', encoding='utf-8') as f:
+            path = f.read().strip()
+        os.unlink(tmp_path)
+        return path.replace("\\", "/")
+    except Exception:
+        return ""
+
+
+def run_download_thread(url, output_folder, resolution, audio_only, start_time, end_time):
+    global harvest_status
+    harvest_status["running"] = True
+    harvest_status["msg"] = "Starting harvest..."
+    _append_log("video_harvester", "[*] Starting download thread...")
+    
+    os.makedirs(output_folder, exist_ok=True)
+    
+    try:
+        height = resolution.replace('p', '') if resolution else 'best'
+        ytdlp_path = r"D:\AI\Projects\stable-diffusion-webui-forge\venv\Scripts\yt-dlp.exe"
+        
+        # Prepare environment paths
+        env = os.environ.copy()
+        venv_scripts = r"D:\AI\Projects\stable-diffusion-webui-forge\venv\Scripts"
+        env["PATH"] = venv_scripts + os.pathsep + env.get("PATH", "")
+        
+        if not start_time and not end_time:
+            # Standard download via yt-dlp
+            if audio_only:
+                args = [ytdlp_path, "-f", "bestaudio/best", "-o", os.path.join(output_folder, "%(title)s.%(ext)s"), "--extract-audio", "--audio-format", "mp3", "--audio-quality", "192K", url]
+            else:
+                fmt = f'bestvideo[height<={height}]+bestaudio/best' if height != 'best' else 'bestvideo+bestaudio/best'
+                args = [ytdlp_path, "-f", fmt, "-o", os.path.join(output_folder, "%(title)s.%(ext)s"), "--merge-output-format", "mp4", url]
+                
+            _append_log("video_harvester", f"[*] Invoking: {' '.join(args)}")
+            proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env)
+            _pipe_reader(proc, "video_harvester")
+            proc.wait()
+            if proc.returncode == 0:
+                _append_log("video_harvester", "[+] Harvest complete successfully!")
+                harvest_status["msg"] = "Complete"
+            else:
+                _append_log("video_harvester", f"[!] Harvest failed with exit code: {proc.returncode}")
+                harvest_status["msg"] = "Failed"
+        else:
+            # Trimmed download requires direct stream URLs and FFmpeg
+            _append_log("video_harvester", "[*] Trimming range requested. Resolving direct stream URLs...")
+            
+            result = subprocess.run([ytdlp_path, "-J", "--no-playlist", url], capture_output=True, text=True, encoding='utf-8', env=env)
+            if result.returncode != 0:
+                raise Exception(f"Failed to fetch metadata: {result.stderr}")
+                
+            info = json.loads(result.stdout)
+            title = "".join([c for c in info.get('title', 'download') if c.isalnum() or c==' ']).strip()
+            
+            if audio_only:
+                audio_url = next(f['url'] for f in reversed(info['formats']) if f.get('vcodec') == 'none' and f.get('acodec') != 'none')
+                output_file = os.path.join(output_folder, f"{title}_trimmed.mp3")
+                cmd = ['ffmpeg', '-y']
+                if start_time: cmd += ['-ss', start_time]
+                if end_time: cmd += ['-to', end_time]
+                cmd += ['-i', audio_url, '-q:a', '0', '-map', 'a', output_file]
+            else:
+                video_url = info['url']
+                audio_url = None
+                try:
+                    video_formats = [f for f in info['formats'] if f.get('vcodec') != 'none' and f.get('acodec') == 'none']
+                    if height != 'best':
+                        video_formats = [f for f in video_formats if f.get('height', 0) <= int(height)]
+                    video_url = video_formats[-1]['url'] if video_formats else info['url']
+                    audio_formats = [f for f in info['formats'] if f.get('vcodec') == 'none' and f.get('acodec') != 'none']
+                    audio_url = audio_formats[-1]['url'] if audio_formats else None
+                except:
+                    pass
+                    
+                output_file = os.path.join(output_folder, f"{title}_trimmed.mp4")
+                cmd = ['ffmpeg', '-y']
+                if start_time: cmd += ['-ss', start_time]
+                if end_time: cmd += ['-to', end_time]
+                cmd += ['-i', video_url]
+                if audio_url:
+                    if start_time: cmd += ['-ss', start_time]
+                    if end_time: cmd += ['-to', end_time]
+                    cmd += ['-i', audio_url]
+                    cmd += ['-map', '0:v', '-map', '1:a', '-c:v', 'libx264', '-c:a', 'aac']
+                else:
+                    cmd += ['-c:v', 'libx264', '-c:a', 'copy']
+                cmd += [output_file]
+                
+            _append_log("video_harvester", f"[*] Invoking FFmpeg: {' '.join(cmd)}")
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            _pipe_reader(proc, "video_harvester")
+            proc.wait()
+            if proc.returncode == 0:
+                _append_log("video_harvester", "[+] Harvest & Trim complete successfully!")
+                harvest_status["msg"] = "Complete"
+            else:
+                _append_log("video_harvester", f"[!] FFmpeg exited with code: {proc.returncode}")
+                harvest_status["msg"] = "Failed"
+    except Exception as e:
+        _append_log("video_harvester", f"[!] Error during harvest: {str(e)}")
+        harvest_status["msg"] = "Error"
+    finally:
+        harvest_status["running"] = False
+
+
+def run_extraction_thread(video_path, output_folder, extraction_type, extraction_value, enable_dedup, hash_threshold, exclude_text):
+    global extraction_status, ocr_reader
+    extraction_status["running"] = True
+    extraction_status["paused"] = False
+    extraction_status["stopped"] = False
+    extraction_status["progress"] = 0
+    extraction_status["total"] = 0
+    extraction_status["saved"] = 0
+    extraction_status["msg"] = "Initializing extraction..."
+    
+    _append_log("dataset_curator", f"[*] Opening video source: {video_path}")
+    os.makedirs(output_folder, exist_ok=True)
+    
+    try:
+        cap = cv2.VideoCapture(video_path)
+        if not cap.isOpened():
+            raise Exception("Failed to open video file.")
+            
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        extraction_status["total"] = total_frames
+        
+        step = 1
+        if extraction_type == "time":
+            step = max(1, int(fps * extraction_value))
+        else:
+            step = max(1, int(extraction_value))
+            
+        _append_log("dataset_curator", f"[*] Target frame step size: {step} (FPS: {fps}, Total frames: {total_frames})")
+        
+        last_hash = None
+        frame_idx = 0
+        saved_count = 0
+        
+        if exclude_text:
+            extraction_status["msg"] = "Initializing EasyOCR engine..."
+            try:
+                import easyocr
+                if ocr_reader is None:
+                    ocr_reader = easyocr.Reader(['en'], gpu=True)
+            except Exception as ocr_err:
+                _append_log("dataset_curator", f"[!] OCR Loader error: {str(ocr_err)}")
+                
+        while frame_idx < total_frames:
+            if extraction_status["stopped"]:
+                _append_log("dataset_curator", "[*] Extraction process aborted by user.")
+                break
+            if extraction_status["paused"]:
+                time.sleep(0.5)
+                continue
+                
+            cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
+            ret, frame = cap.read()
+            if not ret:
+                break
+                
+            filename = f"frame_{frame_idx:06d}.jpg"
+            out_path = os.path.join(output_folder, filename)
+            
+            is_dup = False
+            pil_img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+            if enable_dedup:
+                current_hash = imagehash.phash(pil_img)
+                if last_hash is not None:
+                    diff = current_hash - last_hash
+                    if diff < hash_threshold:
+                        is_dup = True
+                if not is_dup:
+                    last_hash = current_hash
+                    
+            has_text = False
+            if not is_dup and exclude_text and ocr_reader is not None:
+                try:
+                    ocr_res = ocr_reader.readtext(frame)
+                    if len(ocr_res) > 0:
+                        has_text = True
+                except Exception:
+                    pass
+                    
+            if not is_dup and not has_text:
+                cv2.imwrite(out_path, frame)
+                saved_count += 1
+                extraction_status["saved"] = saved_count
+                _append_log("dataset_curator", f"[+] Saved frame: {filename}")
+                
+            frame_idx += step
+            extraction_status["progress"] = min(frame_idx, total_frames)
+            extraction_status["msg"] = f"Extracted {saved_count} frames. Position: {frame_idx}/{total_frames}"
+            
+        cap.release()
+        _append_log("dataset_curator", f"[+] Finished! Staged {saved_count} frames.")
+        extraction_status["msg"] = "Complete"
+    except Exception as e:
+        _append_log("dataset_curator", f"[!] Error during extraction: {str(e)}")
+        extraction_status["msg"] = "Error"
+    finally:
+        extraction_status["running"] = False
+
 # ============================================================
 #  HTTP REQUEST HANDLER
 # ============================================================
@@ -1606,6 +2102,15 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         # ---- GGUF Models ----
         elif self.path == '/api/models':
             self._json_ok({"models": scan_ggufs()})
+
+        # ---- SDC Extraction Status ----
+        elif self.path == '/api/extract-status':
+            self._json_ok(extraction_status)
+
+        # ---- SDC Harvest Status ----
+        elif self.path == '/api/harvest-status':
+            self._json_ok(harvest_status)
+
 
         # ---- Ollama models (proxied) ----
         elif self.path == '/api/ollama/models':
@@ -1835,6 +2340,132 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 self._json_ok({"error": "Ollama is not running or unreachable on port 11434"})
             except Exception as e:
                 self._json_ok({"error": str(e)})
+
+        # ---- SDC Select Folder ----
+        elif self.path == '/api/select-folder':
+            try:
+                path = _run_folder_picker()
+                self._json_ok({"path": path})
+            except Exception as e:
+                self._json_ok({"error": str(e)})
+
+        # ---- SDC Select File ----
+        elif self.path == '/api/select-file':
+            try:
+                path = _run_file_picker("video")
+                self._json_ok({"path": path})
+            except Exception as e:
+                self._json_ok({"error": str(e)})
+
+        # ---- SDC Inspect Formats ----
+        elif self.path == '/api/inspect-formats':
+            try:
+                payload = json.loads(body)
+                url = payload.get('url')
+                if not url:
+                    self._json_ok({"error": "No URL provided"}); return
+                
+                ytdlp_path = r"D:\AI\Projects\stable-diffusion-webui-forge\venv\Scripts\yt-dlp.exe"
+                import os
+                env = os.environ.copy()
+                venv_scripts = r"D:\AI\Projects\stable-diffusion-webui-forge\venv\Scripts"
+                env["PATH"] = venv_scripts + os.pathsep + env.get("PATH", "")
+                
+                result = subprocess.run(
+                    [ytdlp_path, "-J", "--no-playlist", url],
+                    capture_output=True,
+                    text=True,
+                    encoding='utf-8',
+                    env=env
+                )
+                if result.returncode != 0:
+                    self._json_ok({"error": f"Failed to extract info: {result.stderr or 'Unknown error'}"}); return
+                
+                info = json.loads(result.stdout)
+                formats = []
+                seen_resolutions = set()
+                for f in info.get('formats', []):
+                    height = f.get('height')
+                    ext = f.get('ext')
+                    if height and height not in seen_resolutions and ext in ['mp4', 'webm']:
+                        seen_resolutions.add(height)
+                        formats.append({
+                            "format_id": f.get('format_id'),
+                            "resolution": f"{height}p",
+                            "ext": ext,
+                            "height": height
+                        })
+                formats.sort(key=lambda x: x['height'], reverse=True)
+                
+                self._json_ok({
+                    "status": "success",
+                    "title": info.get('title', 'Unknown Title'),
+                    "duration": info.get('duration', 0),
+                    "thumbnail": info.get('thumbnail', ''),
+                    "formats": formats
+                })
+            except Exception as e:
+                self._json_ok({"error": str(e)})
+
+        # ---- SDC Download / Harvest ----
+        elif self.path == '/api/download':
+            try:
+                payload = json.loads(body)
+                url = payload.get('url')
+                output_folder = payload.get('outputFolder', '').strip('"').strip("'")
+                resolution = payload.get('resolution')
+                audio_only = payload.get('audioOnly', False)
+                start_time = payload.get('startTime')
+                end_time = payload.get('endTime')
+                
+                if not url or not output_folder:
+                    self._json_ok({"error": "Missing URL or Output Folder"}); return
+                
+                t = threading.Thread(target=run_download_thread, args=(url, output_folder, resolution, audio_only, start_time, end_time), daemon=True)
+                t.start()
+                self._json_ok({"status": "success", "message": "Download started asynchronously."})
+            except Exception as e:
+                self._json_ok({"error": str(e)})
+
+        # ---- SDC Extract Frames ----
+        elif self.path == '/api/extract':
+            try:
+                payload = json.loads(body)
+                video_path = payload.get('videoPath')
+                output_folder = payload.get('outputFolder')
+                extraction_type = payload.get('extractionType')
+                extraction_value = float(payload.get('extractionValue', 1.0))
+                enable_dedup = payload.get('enableDedup', False)
+                hash_threshold = int(payload.get('hashThreshold', 12))
+                exclude_text = payload.get('excludeText', False)
+                
+                if not video_path or not output_folder:
+                    self._json_ok({"error": "Missing video path or output folder"}); return
+                
+                t = threading.Thread(target=run_extraction_thread, args=(video_path, output_folder, extraction_type, extraction_value, enable_dedup, hash_threshold, exclude_text), daemon=True)
+                t.start()
+                self._json_ok({"status": "success", "message": "Extraction started asynchronously."})
+            except Exception as e:
+                self._json_ok({"error": str(e)})
+
+        # ---- SDC Extract Controls (Pause/Resume/Stop) ----
+        elif self.path == '/api/extract-pause':
+            global extraction_status
+            if extraction_status["running"]:
+                extraction_status["paused"] = True
+                extraction_status["msg"] = "Extraction Paused."
+            self._json_ok({"status": "paused"})
+
+        elif self.path == '/api/extract-resume':
+            if extraction_status["running"]:
+                extraction_status["paused"] = False
+            self._json_ok({"status": "resumed"})
+
+        elif self.path == '/api/extract-stop':
+            if extraction_status["running"]:
+                extraction_status["stopped"] = True
+                extraction_status["msg"] = "Stopping extraction..."
+            self._json_ok({"status": "stopped"})
 
         # ---- SDC VLM Tag ----
         elif self.path == '/api/sdc/tag-vlm':

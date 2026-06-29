@@ -16,5 +16,4 @@ If alreadyRunning Then
     WScript.Quit
 End If
 
-WshShell.CurrentDirectory = "D:\AI\Projects\command_center"
-WshShell.Run "C:\Users\boben\AppData\Local\Programs\Python\Python311\python.exe D:\AI\Projects\command_center\sanctuary_command_center.py", 0, False
+WshShell.Run "D:\AI\Projects\stable-diffusion-webui-forge\venv\Scripts\python.exe D:\AI\Projects\command_center\sanctuary_command_center.py", 0, False

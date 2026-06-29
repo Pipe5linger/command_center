@@ -1206,16 +1206,19 @@ HTML_UI = """<!DOCTYPE html>
                 d.items.forEach(item => {
                     const row = document.createElement('div');
                     row.className = 'file-item';
+                    row.setAttribute('data-path', item.path);
+                    row.setAttribute('data-name', item.name);
+                    row.setAttribute('data-isdir', item.is_dir ? 'true' : 'false');
+                    
                     const icon = item.is_dir ? '&#128193;' : getFileIcon(item.name);
                     const size = item.is_dir ? '' : item.size + ' MB';
-                    const escapedPath = item.path.replace(/\\\\/g, '\\\\\\\\').replace(/'/g, "\\'");
                     row.innerHTML =
-                        '<div class="file-meta" onclick="' + (item.is_dir ? 'loadDirectory(\\'' + escapedPath + '\\')' : 'previewFile(\\'' + escapedPath + '\\', \\'' + item.name.replace(/'/g, "\\'") + '\\')') + '">' +
+                        '<div class="file-meta" onclick="handleFileClick(this)">' +
                             '<span class="file-icon">' + icon + '</span>' +
                             '<span class="file-name">' + item.name + '</span>' +
                             '<span class="file-size">' + size + '</span>' +
                         '</div>' +
-                        '<div class="file-actions"><button onclick="openFileDirectory(\\'' + escapedPath + '\\')" style="padding:2px 8px;font-size:10px">Show</button></div>';
+                        '<div class="file-actions"><button onclick="handleShowClick(this)" style="padding:2px 8px;font-size:10px">Show</button></div>';
                     con.appendChild(row);
                 });
             } catch(e) { con.innerHTML = '<div style="text-align:center;padding:40px;color:var(--danger)">Connection error</div>'; }
@@ -1243,6 +1246,24 @@ HTML_UI = """<!DOCTYPE html>
         async function openCurrentDirInHost() { await fetch('/api/open-folder?path=' + encodeURIComponent(currentExplorerPath)); }
         async function openFileDirectory(p)   { await fetch('/api/open-file-dir?path=' + encodeURIComponent(p)); }
 
+        function handleFileClick(el) {
+            const card = el.closest('[data-path]');
+            const path = card.getAttribute('data-path');
+            const name = card.getAttribute('data-name');
+            const isDir = card.getAttribute('data-isdir') === 'true';
+            if (isDir) {
+                loadDirectory(path);
+            } else {
+                previewFile(path, name);
+            }
+        }
+
+        function handleShowClick(el) {
+            const card = el.closest('[data-path]');
+            const path = card.getAttribute('data-path');
+            openFileDirectory(path);
+        }
+
         async function previewFile(path, name) {
             const ext = name.split('.').pop().toLowerCase();
             const lb = document.getElementById('mediaLightbox');
@@ -1258,7 +1279,7 @@ HTML_UI = """<!DOCTYPE html>
                     content.innerHTML = '<h3 style="font-size:14px;margin-bottom:8px">' + name + '</h3><pre style="width:660px;height:420px;overflow:auto;text-align:left;background:rgba(0,0,0,0.4);padding:14px;border-radius:10px;font-family:JetBrains Mono,monospace;font-size:11px;white-space:pre-wrap;border:1px solid var(--border);color:var(--text-secondary)">' + escapeHtml(text) + '</pre>';
                 } catch(e) { content.innerHTML = '<div style="color:var(--danger)">Failed to load preview</div>'; }
             } else {
-                content.innerHTML = '<h3>' + name + '</h3><p style="color:var(--text-muted);font-size:12px;margin-top:8px">Binary file — cannot preview inline.</p><button class="btn-primary" style="margin-top:16px" onclick="openFileDirectory(\\'' + path.replace(/\\\\/g, '\\\\\\\\').replace(/'/g, "\\'") + '\\')">Open in Windows</button>';
+                content.innerHTML = '<h3>' + name + '</h3><p style="color:var(--text-muted);font-size:12px;margin-top:8px">Binary file — cannot preview inline.</p><button class="btn-primary" style="margin-top:16px" data-path="' + path + '" onclick="handleShowClick(this)">Open in Windows</button>';
             }
         }
 
@@ -1281,12 +1302,12 @@ HTML_UI = """<!DOCTYPE html>
                 if (!d.results.length) { tb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted)">No results.</td></tr>'; return; }
                 d.results.forEach(r => {
                     const tr = document.createElement('tr');
-                    const ep = r.path.replace(/\\\\/g, '\\\\\\\\').replace(/'/g, "\\'");
+                    tr.setAttribute('data-path', r.path);
                     tr.innerHTML =
                         '<td style="color:var(--text-primary);font-weight:600">' + r.name + '</td>' +
                         '<td>' + r.size + '</td>' +
                         '<td style="color:var(--text-muted)">' + r.path + '</td>' +
-                        '<td style="text-align:right"><button onclick="openFileDirectory(\\'' + ep + '\\')" style="padding:3px 8px;font-size:10px">Show</button></td>';
+                        '<td style="text-align:right"><button onclick="handleShowClick(this)" style="padding:3px 8px;font-size:10px">Show</button></td>';
                     tb.appendChild(tr);
                 });
             } catch(e) { document.getElementById('searchResultsBody').innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--danger)">Search failed.</td></tr>'; }
