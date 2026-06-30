@@ -7,6 +7,8 @@ import subprocess
 import socket
 import urllib.request
 import urllib.parse
+import yt_dlp
+
 import urllib.error
 import ctypes
 import threading
@@ -2173,6 +2175,48 @@ def run_extraction_thread(video_path, output_folder, extraction_type, extraction
         extraction_status["running"] = False
 
 # ============================================================
+
+# --- Video Harvester Helpers ---
+def get_video_info(url):
+    ydl_opts = {
+        'quiet': True,
+        'no_warnings': True,
+        'format': 'best',
+    }
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+        return {
+            "title": info.get("title"),
+            "duration": info.get("duration"),
+            "thumbnail": info.get("thumbnail"),
+            "formats": info.get("formats", []),
+            "description": info.get("description"),
+            "uploader": info.get("uploader"),
+            "view_count": info.get("view_count")
+        }
+
+def download_video_thread(url, output_folder, format_str, status_dict):
+    try:
+        ydl_opts = {
+            'format': format_str,
+            'outtmpl': os.path.join(output_folder, '%(title)s.%(ext)s'),
+            'quiet': False,
+            'no_warnings': True,
+            'merge_output_format': 'mkv',
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            filename = ydl.prepare_filename(info)
+            status_dict["msg"] = f"Download Complete: {os.path.basename(filename)}"
+            status_dict["success"] = True
+            status_dict["file"] = filename
+    except Exception as e:
+        status_dict["msg"] = f"Error: {str(e)}"
+        status_dict["success"] = False
+
+# Update global status to include extra fields
+harvest_status.update({"success": False, "file": None})
+
 #  HTTP REQUEST HANDLER
 # ============================================================
 class DashboardHandler(SimpleHTTPRequestHandler):
@@ -2498,8 +2542,31 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             except Exception as e:
                 self._json_ok({"error": str(e)})
 
-        # ---- SDC Download / Harvest ----
-        elif self.path == '/api/download':
+        # ---- Harvest Video ----
+        elif self.path == '/api/harvest-video':
+            try:
+                payload = json.loads(body)
+                url = payload.get('url')
+                format_str = payload.get('format', 'best')
+                output_folder = r"D:\AI\Projects\flux_training\harvested_videos"
+                
+                if not url:
+                    self._json_ok({"error": "Missing URL"})
+                    return
+                
+                if not os.path.exists(output_folder):
+                    os.makedirs(output_folder, exist_ok=True)
+                
+                harvest_status.update({"running": True, "progress": "Downloading...", "msg": f"Starting download: {url}"})
+                
+                threading.Thread(target=download_video_thread, 
+                                 args=(url, output_folder, format_str, harvest_status),
+                                 daemon=True).start()
+                
+                self._json_ok({"status": "success", "msg": "Download thread initiated"})
+            except Exception as e:
+                self._json_ok({"error": str(e)})
+        
             try:
                 payload = json.loads(body)
                 url = payload.get('url')
