@@ -857,8 +857,9 @@ document.getElementById("vramRaw").textContent = gpuErr;
                     tb.appendChild(tr);
                 });
 
-console.error('[fetchStats]', e);
-            } catch(e) {}
+} catch(e) {
+                console.error('[fetchStats]', e);
+            }
         }
 
         // ============================================================
