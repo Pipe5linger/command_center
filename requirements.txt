@@ -1,5 +1,7 @@
 Flask
-
+psutil
+requests
+nvidia-ml-py
 yt-dlp
 opencv-python
 imagehash

@@ -5,7 +5,7 @@ Set colProcs = objWMI.ExecQuery("SELECT ProcessId, CommandLine FROM Win32_Proces
 Dim alreadyRunning : alreadyRunning = False
 For Each proc In colProcs
     If Not IsNull(proc.CommandLine) Then
-        If InStr(LCase(proc.CommandLine), "sanctuary_command_center.py") > 0 Then
+        If InStr(LCase(proc.CommandLine), "app.py") > 0 Then
             alreadyRunning = True
             Exit For
         End If
@@ -16,4 +16,4 @@ If alreadyRunning Then
     WScript.Quit
 End If
 
-WshShell.Run "D:\AI\Projects\stable-diffusion-webui-forge\venv\Scripts\python.exe D:\AI\Projects\command_center\sanctuary_command_center.py", 0, False
+WshShell.Run "pythonw.exe D:\AI\Projects\command_center\app.py", 0, False

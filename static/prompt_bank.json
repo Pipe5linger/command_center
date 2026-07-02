@@ -1,0 +1,117 @@
+{
+  "camera": {
+    "label": "Camera",
+    "sub": {
+      "angle": [
+        "eye-level shot", "low angle heroic shot", "dutch tilt shot",
+        "overhead bird's-eye view", "worm's-eye view", "POV shot",
+        "over-the-shoulder shot", "dramatic up-shot", "canted angle",
+        "straight-on deadpan", "high angle vulnerable", "extreme low angle towering",
+        "profile side view", "three-quarter angle", "dutch roll",
+        "aerial drone shot", "upside-down disorienting", "crane shot descending"
+      ],
+      "distance": [
+        "extreme close-up", "medium close-up", "medium shot", "wide shot",
+        "full body shot", "establishing shot", "cowboy shot", "macro detail",
+        "intimate close-up", "knee-up shot", "extreme wide landscape",
+        "medium wide two-shot", "insert detail shot", "overhead tabletop"
+      ],
+      "lens": [
+        "24mm wide-angle", "35mm natural", "50mm standard", "85mm portrait",
+        "135mm telephoto", "200mm compressed", "fisheye lens", "tilt-shift",
+        "anamorphic widescreen", "macro lens", "70-200mm zoom", "14mm ultra-wide",
+        "lensbaby creative", "helical bokeh"
+      ],
+      "focus": [
+        "razor-sharp focus", "shallow depth of field", "deep focus everything sharp",
+        "rack focus pull", "soft dreamy focus", "split diopter",
+        "bokeh background blur", "tack-sharp foreground", "selective focus",
+        "infinite focus landscape", "gaussian blur edges", "tilted focal plane"
+      ]
+    }
+  },
+  "lighting": {
+    "label": "Lighting",
+    "sub": {
+      "type": [
+        "golden hour sunlight", "neon noir city glow", "Rembrandt lighting",
+        "chiaroscuro dramatic", "rim light edge glow", "butterfly paramount",
+        "backlit silhouette", "volumetric god rays", "moonlight silver",
+        "candlelight warm flicker", "strobe harsh", "soft window light",
+        "practical lamp glow", "LED colored wash", "firelight orange",
+        "underlight horror", "top-down spotlight", "natural overcast flat",
+        "sunset amber", "blue hour twilight", "studio three-point"
+      ],
+      "color": [
+        "warm amber tones", "cool cyan wash", "magenta-pink neon", "golden hour glow",
+        "silver moonlight", "blue hour cool", "mixed temperature clash",
+        "monochrome single hue", "teal-orange cinematic", "purple lavender",
+        "red danger wash", "green toxic glow", "white clinical neutral",
+        "rainbow prismatic", "sepia vintage warmth", "ice cold blue",
+        "candle flame orange", "sunset crimson"
+      ],
+      "quality": [
+        "hard dramatic shadows", "soft diffused wrap", "harsh direct beam",
+        "matte flat even", "specular reflective highlights", "crepuscular rays",
+        "dappled broken light", "silky smooth gradation", "high contrast noir",
+        "low contrast hazy", "blown-out overexposed rim", "underexposed moody"
+      ]
+    }
+  },
+  "mood": {
+    "label": "Mood & Atmosphere",
+    "sub": {
+      "atmosphere": [
+        "ethereal dreamlike", "dark brooding tension", "serene peaceful calm",
+        "chaotic energetic frenzy", "melancholic nostalgic", "mysterious unknown",
+        "oppressive suffocating", "whimsical playful", "lonely isolated void",
+        "triumphant victorious", "intimate vulnerable", "cold detached clinical",
+        "romantic soft haze", "apocalyptic desolate", "surreal uncanny",
+        "electric charged anticipation", "tranquil zen stillness"
+      ],
+      "emotion": [
+        "lonely solitude", "triumphant power", "intimate vulnerability",
+        "cold detachment", "euphoric bliss", "simmering quiet rage",
+        "innocent wonder", "grief despair", "defiant rebellion",
+        "peaceful contentment", "anxious dread", "playful mischief",
+        "awe reverence", "bitter resentment", "hopeful longing"
+      ],
+      "weather": [
+        "fog-shrouded mist", "rain-soaked wet", "sun-drenched bright",
+        "snow-dusted frost", "storm-gathering clouds", "misty dawn haze",
+        "oppressive humidity", "clear crisp air", "lightning-struck tempest",
+        "gentle snowfall", "howling wind", "rainbow after storm",
+        "dust storm haze", "freezing ice crystal", "autumn crisp breeze"
+      ]
+    }
+  },
+  "style": {
+    "label": "Style & Medium",
+    "sub": {
+      "medium": [
+        "photorealistic 8K", "oil painting on canvas", "charcoal sketch",
+        "anime cel-shaded", "watercolor wash", "3D render octane",
+        "vintage 35mm film", "comic book panel", "pixel art 16-bit",
+        "double exposure", "pencil illustration", "digital matte painting",
+        "gouache opaque", "acrylic impasto", "airbrush smooth", "stained glass",
+        "linocut print", "collage mixed media", "vector flat design",
+        "concept art cinematic", "chalk pastel", "ink wash sumi-e"
+      ],
+      "era": [
+        "1980s dark fantasy", "cyberpunk 2077 neon", "Victorian gothic",
+        "1970s grindhouse", "art deco elegance", "medieval fantasy",
+        "retro-futurism atompunk", "dieselpunk industrial", "90s vaporwave",
+        "Baroque ornate", "Renaissance classical", "modern minimalist",
+        "brutalist concrete", "tribal ancient", "sci-fi utopian",
+        "post-apocalyptic wasteland", "space-age 60s", "film noir 1940s"
+      ],
+      "color_grade": [
+        "desaturated moody", "vibrant saturated pop", "teal-orange blockbuster",
+        "monochrome black and white", "pastel soft dream", "high contrast crushed blacks",
+        "bleach bypass silver", "cross-processed surreal", "technicolor rich",
+        "cool blue shift", "warm gold push", "faded vintage polaroid",
+        "HDR hyper-real", "duotone cyan-magenta", "natural true-to-life"
+      ]
+    }
+  }
+}

@@ -356,3 +356,242 @@ Traceback (most recent call last):
            ^^^^^^^^^^^^^^^^^^^^^^^
 ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
 ----------------------------------------
+ * Serving Flask app 'app'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5001
+Press CTRL+C to quit
+ * Serving Flask app 'app'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5001
+Press CTRL+C to quit
+Testing /api/info with valid URL: https://www.youtube.com/watch?v=dQw4w9WgXcQ
+Traceback (most recent call last):
+  File "D:\AI\Projects\command_center\test_api_info.py", line 19, in <module>
+    response_valid = api_info() # Call the actual function
+                     ^^^^^^^^^^
+  File "D:\AI\Projects\command_center\app.py", line 10, in api_info
+    url = request.args.get('url')
+          ^^^^^^^^^^^^
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\site-packages\werkzeug\local.py", line 318, in __get__
+    obj = instance._get_current_object()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\site-packages\werkzeug\local.py", line 519, in _get_current_object
+    raise RuntimeError(unbound_message) from None
+RuntimeError: Working outside of request context.
+
+This typically means that you attempted to use functionality that needed
+an active HTTP request. Consult the documentation on testing for
+information about how to avoid this problem.
+Testing /api/info with valid URL: https://www.youtube.com/watch?v=dQw4w9WgXcQ
+Error during valid URL test: Working outside of request context.
+
+This typically means that you attempted to use functionality that needed
+an active HTTP request. Consult the documentation on testing for
+information about how to avoid this problem.
+Traceback (most recent call last):
+  File "D:\AI\Projects\command_center\test_api_info.py", line 32, in <module>
+    response_valid = api_info() # Call the actual function
+                     ^^^^^^^^^^
+  File "D:\AI\Projects\command_center\app.py", line 10, in api_info
+    url = request.args.get('url')
+          ^^^^^^^^^^^^
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\site-packages\werkzeug\local.py", line 318, in __get__
+    obj = instance._get_current_object()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\site-packages\werkzeug\local.py", line 519, in _get_current_object
+    raise RuntimeError(unbound_message) from None
+RuntimeError: Working outside of request context.
+
+This typically means that you attempted to use functionality that needed
+an active HTTP request. Consult the documentation on testing for
+information about how to avoid this problem.
+
+Testing /api/info with missing URL...
+Error during missing URL test: request
+Traceback (most recent call last):
+  File "D:\AI\Projects\command_center\test_api_info.py", line 50, in <module>
+    sys.modules['flask'].request.args = {}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\site-packages\flask\__init__.py", line 61, in __getattr__
+    raise AttributeError(name)
+AttributeError: request
+Traceback (most recent call last):
+  File "D:\AI\Projects\command_center\test_api_info.py", line 38, in <module>
+    response_valid = api_info() # Call the actual function
+                     ^^^^^^^^^^
+  File "D:\AI\Projects\command_center\app.py", line 10, in api_info
+    url = request.args.get('url')
+          ^^^^^^^^^^^^
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\site-packages\werkzeug\local.py", line 318, in __get__
+    obj = instance._get_current_object()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\site-packages\werkzeug\local.py", line 519, in _get_current_object
+    raise RuntimeError(unbound_message) from None
+RuntimeError: Working outside of request context.
+
+This typically means that you attempted to use functionality that needed
+an active HTTP request. Consult the documentation on testing for
+information about how to avoid this problem.
+Traceback (most recent call last):
+  File "D:\AI\Projects\command_center\test_api_info.py", line 57, in <module>
+    response_missing = api_info()
+                       ^^^^^^^^^^
+  File "D:\AI\Projects\command_center\app.py", line 10, in api_info
+    url = request.args.get('url')
+          ^^^^^^^^^^^^
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\site-packages\werkzeug\local.py", line 318, in __get__
+    obj = instance._get_current_object()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\site-packages\werkzeug\local.py", line 519, in _get_current_object
+    raise RuntimeError(unbound_message) from None
+RuntimeError: Working outside of request context.
+
+This typically means that you attempted to use functionality that needed
+an active HTTP request. Consult the documentation on testing for
+information about how to avoid this problem.
+Test output written to: C:\Users\boben\AppData\Local\Temp\api_info_test_output.txt
+--- Testing /api/info with valid URL: https://www.youtube.com/watch?v=dQw4w9WgXcQ ---
+Error during valid URL test: Working outside of request context.
+
+This typically means that you attempted to use functionality that needed
+an active HTTP request. Consult the documentation on testing for
+information about how to avoid this problem.
+Traceback (most recent call last):
+  File "D:\AI\Projects\command_center\test_api_info.py", line 31, in <module>
+    response_valid = api_info() # Call the actual function
+                     ^^^^^^^^^^
+  File "D:\AI\Projects\command_center\app.py", line 10, in api_info
+    url = request.args.get('url')
+          ^^^^^^^^^^^^
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\site-packages\werkzeug\local.py", line 318, in __get__
+    obj = instance._get_current_object()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\site-packages\werkzeug\local.py", line 519, in _get_current_object
+    raise RuntimeError(unbound_message) from None
+RuntimeError: Working outside of request context.
+
+This typically means that you attempted to use functionality that needed
+an active HTTP request. Consult the documentation on testing for
+information about how to avoid this problem.
+--- Testing /api/info with missing URL ---
+Error during missing URL test: Working outside of request context.
+
+This typically means that you attempted to use functionality that needed
+an active HTTP request. Consult the documentation on testing for
+information about how to avoid this problem.
+Traceback (most recent call last):
+  File "D:\AI\Projects\command_center\test_api_info.py", line 53, in <module>
+    response_missing = api_info()
+                       ^^^^^^^^^^
+  File "D:\AI\Projects\command_center\app.py", line 10, in api_info
+    url = request.args.get('url')
+          ^^^^^^^^^^^^
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\site-packages\werkzeug\local.py", line 318, in __get__
+    obj = instance._get_current_object()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\site-packages\werkzeug\local.py", line 519, in _get_current_object
+    raise RuntimeError(unbound_message) from None
+RuntimeError: Working outside of request context.
+
+This typically means that you attempted to use functionality that needed
+an active HTTP request. Consult the documentation on testing for
+information about how to avoid this problem.
+--- Testing /api/info with valid URL: https://www.youtube.com/watch?v=dQw4w9WgXcQ ---
+Error during valid URL test: Working outside of request context.
+
+This typically means that you attempted to use functionality that needed
+an active HTTP request. Consult the documentation on testing for
+information about how to avoid this problem.
+Traceback (most recent call last):
+  File "D:\AI\Projects\command_center\test_api_info.py", line 31, in <module>
+    response_valid = api_info() # Call the actual function
+                     ^^^^^^^^^^
+  File "D:\AI\Projects\command_center\app.py", line 10, in api_info
+    url = request.args.get('url')
+          ^^^^^^^^^^^^
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\site-packages\werkzeug\local.py", line 318, in __get__
+    obj = instance._get_current_object()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\site-packages\werkzeug\local.py", line 519, in _get_current_object
+    raise RuntimeError(unbound_message) from None
+RuntimeError: Working outside of request context.
+
+This typically means that you attempted to use functionality that needed
+an active HTTP request. Consult the documentation on testing for
+information about how to avoid this problem.
+--- Testing /api/info with missing URL ---
+Error during missing URL test: Working outside of request context.
+
+This typically means that you attempted to use functionality that needed
+an active HTTP request. Consult the documentation on testing for
+information about how to avoid this problem.
+Traceback (most recent call last):
+  File "D:\AI\Projects\command_center\test_api_info.py", line 53, in <module>
+    response_missing = api_info()
+                       ^^^^^^^^^^
+  File "D:\AI\Projects\command_center\app.py", line 10, in api_info
+    url = request.args.get('url')
+          ^^^^^^^^^^^^
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\site-packages\werkzeug\local.py", line 318, in __get__
+    obj = instance._get_current_object()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\site-packages\werkzeug\local.py", line 519, in _get_current_object
+    raise RuntimeError(unbound_message) from None
+RuntimeError: Working outside of request context.
+
+This typically means that you attempted to use functionality that needed
+an active HTTP request. Consult the documentation on testing for
+information about how to avoid this problem.
+--- Testing /api/info with valid URL: https://www.youtube.com/watch?v=dQw4w9WgXcQ ---
+Error during valid URL test: Working outside of request context.
+
+This typically means that you attempted to use functionality that needed
+an active HTTP request. Consult the documentation on testing for
+information about how to avoid this problem.
+Traceback (most recent call last):
+  File "D:\AI\Projects\command_center\test_api_info.py", line 31, in <module>
+    response_valid = api_info() # Call the actual function
+                     ^^^^^^^^^^
+  File "D:\AI\Projects\command_center\app.py", line 10, in api_info
+    url = request.args.get('url')
+          ^^^^^^^^^^^^
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\site-packages\werkzeug\local.py", line 318, in __get__
+    obj = instance._get_current_object()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\site-packages\werkzeug\local.py", line 519, in _get_current_object
+    raise RuntimeError(unbound_message) from None
+RuntimeError: Working outside of request context.
+
+This typically means that you attempted to use functionality that needed
+an active HTTP request. Consult the documentation on testing for
+information about how to avoid this problem.
+--- Testing /api/info with missing URL ---
+Error during missing URL test: Working outside of request context.
+
+This typically means that you attempted to use functionality that needed
+an active HTTP request. Consult the documentation on testing for
+information about how to avoid this problem.
+Traceback (most recent call last):
+  File "D:\AI\Projects\command_center\test_api_info.py", line 53, in <module>
+    response_missing = api_info()
+                       ^^^^^^^^^^
+  File "D:\AI\Projects\command_center\app.py", line 10, in api_info
+    url = request.args.get('url')
+          ^^^^^^^^^^^^
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\site-packages\werkzeug\local.py", line 318, in __get__
+    obj = instance._get_current_object()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\boben\AppData\Local\Programs\Python\Python311\Lib\site-packages\werkzeug\local.py", line 519, in _get_current_object
+    raise RuntimeError(unbound_message) from None
+RuntimeError: Working outside of request context.
+
+This typically means that you attempted to use functionality that needed
+an active HTTP request. Consult the documentation on testing for
+information about how to avoid this problem.
+ * Serving Flask app 'app'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5001
+Press CTRL+C to quit
