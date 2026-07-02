@@ -97,18 +97,116 @@ Integration of the Sanctuary Video Downloader & Clipper (SVD) and the Sanctuary 
 
 ---
 
-## ⏳ Remaining / Next Up
-- [ ] **Video Harvester APIs**
-    - `GET /api/info` (yt-dlp format inspection)
-    - `POST /api/download` (background download with timestamping)
-- [ ] **Extraction & Staging APIs**
-    - `POST /api/extract` (OpenCV frame extraction + imagehash deduplication)
-    - `GET /api/extract-status` (Telemetry for progress bars)
-- [ ] **Frontend UI Consolidation**
-    - Implement "Sub-Studio" Layout (Ingest / Stage / Curate tabs)
-    - Real-time Telemetry & Log Streamers (beyond basic streaming)
-- [ ] **Ollama/LM Studio integration testing** — run `setup_ollama.bat` and verify `ollama list`
+## 📅 Session: 2026-07-02 — SDC Routes, Search, Panic & GGUF Listing (Cline)
+
+### ✅ 6 Missing Backend Routes Implemented
+- [x] **`GET /api/models`** — Scans `D:\AI\Models\LLM` for .gguf files, returns `{models: [...]}`
+    - Frontend AI Matrix tab now populates GGUF model dropdown (was failing silently)
+- [x] **`GET /api/panic`** — Kills all known AI backend processes (KoboldCPP, Ollama, LM Studio)
+- [x] **`GET /api/search?q=`** — Recursive filename search under `D:\AI\`, max depth 4, 100 results
+    - Returns `{results: [{name, size, path}, ...]}`
+- [x] **`GET /api/sdc/scan?path=`** — Scans directory for image files (png/jpg/gif/bmp/webp/tiff)
+    - Returns `{images: [{name, path}, ...]}`
+- [x] **`GET /api/sdc/thumb?path=`** — On-the-fly thumbnail generation via PIL; raw fallback without PIL
+- [x] **`POST /api/sdc/tag-vlm`** — Sends image (base64) to Ollama vision model for auto-tagging
+    - Returns `{tags: "..."}` or 503 if Ollama is offline
+
+### 🔍 Gap Analysis Against Frontend
+- **7 routes were referenced in `index.html` but absent from `app.py`** — 6 now fixed.
+- **`POST /api/extract` & `GET /api/extract-status`** are the only remaining missing routes (OpenCV frame extraction).
+
+### 📊 Updated Route Count: 26 total (20 original + 6 new)
+
+### 📝 Docs Correction
+- Video Harvester APIs (`/api/info`, `/api/download`, `/api/download_status`) were already implemented and functional. Previously misreported as "remaining."
 
 ---
 
-**Last Updated:** 2026-07-02 — Vespera Session (LLM Audit + Backend Routes + VBS Fix)
+## ⏳ Remaining / Next Up
+- [x] **Extraction & Staging APIs** -- DONE
+    - `POST /api/extract` (OpenCV frame extraction + pHash dedup via imagehash)
+    - `GET /api/extract-status` (Poll: running/progress/total/saved/skipped)
+    - `POST /api/extract-stop` (Graceful stop signal)
+    - `POST /api/extract-pause` (Toggle pause/resume)
+    - Live-tested: 239-frame video, 2 unique frames saved, 5 duplicates auto-skipped
+- [x] **Ollama integration testing** -- All 13 models registered. `setup_ollama.bat` was already run 4-5h ago. `ollama list` verified all models active.
+- [x] **Cleanup** -- Removed scratch/ (63 temp files), prompt_gen_ui.js duplicate, corrupted root index.html, stale logs & temp scripts. 75 files purged total.
+- [ ] **LM Studio integration testing** -- run `setup_lmstudio.bat`, verify in LM Studio UI (lower priority)
+
+---
+
+**Last Updated:** 2026-07-02 -- Cline Session (Cyberpunk UI Applied)
+
+---
+
+## 📅 Session: 2026-07-02 -- Cyberpunk UI Redesign Applied
+
+### ✅ Cyberpunk Theme Applied to `templates/index.html`
+- [x] Celadon accent color (#2DD4BF) -- primary accent replacing purple
+- [x] CRT scanlines via `body::after` pseudo-element
+- [x] Glassmorphism panels -- `blur(16px) saturate(140%)`, hover glow + top light bar
+- [x] Stat cards -- celadon radial gradient hover, glow box-shadow
+- [x] Header -- deeper blur (`28px`), saturate boost, celadon border-bottom shadow
+- [x] SCC badge -- `@keyframes badgePulse` animated celadon glow
+- [x] Progress bars -- `@keyframes shimmer` sweeping highlight animation
+- [x] Scrollbar -- celadon tint
+- [x] Tabs -- celadon active glow, inner shadow, text-shadow hover
+- [x] Background -- deeper void (#060810), layered radial + repeating gradients
+
+### 💡 Note
+The scratch/ directory (63 cyberpunk UI generator scripts) was deleted in cleanup.
+This cyberpunk application was built fresh against the plan + design references.
+
+---
+
+**Final Route Count:** 30 | **Final File Count:** ~30 core files | **app.py:** 983 lines
+
+---
+
+## 📅 Session: 2026-07-02 — Bootstrap Refresh & Context Sync (Session E)
+
+### ✅ BOOTSTRAP.md Rebuilt From Scratch
+- [x] Old `BOOTSTRAP.md` was stale (pre-cyberpunk, pre-extraction APIs, listed only ~12 routes).
+- [x] **Full rebuild** with current project state:
+    - Complete **30-route inventory** (categorized: Core, AI Backends, Harvester, Explorer, Launchers, Prompt Gen, Terminals, SDC, Extraction).
+    - Updated key files table (added `register_ollama_models.py`, `implementation_plan.md`, `ui-redesign-plan.md`, `test_api_info.py`, `_design_references/`).
+    - Documented cyberpunk theme (celadon accent, CRT scanlines, glassmorphism, fonts).
+    - Full LLM library table (13 curated models with quants & architectures).
+    - Session-by-session accomplishment log (Sessions A–E).
+    - Updated remaining tasks (LM Studio testing only medium-priority item left).
+    - Expanded gotchas (deleted files noted, IDE terminal quirks).
+
+### ✅ status_checkpoint.md Updated
+- [x] This entry appended documenting the bootstrap refresh.
+
+### 📊 Current State Snapshot
+| Metric | Value |
+|--------|-------|
+| Total routes | 30 |
+| `app.py` lines | 983 |
+| Core files | ~30 |
+| GGUF models (curated) | 13 |
+| Disk reclaimed (LLM cleanup) | 100.43 GB |
+| Frontend theme | Cyberpunk (celadon) |
+| Backend launchers | KoboldCPP, Ollama, LM Studio |
+| Extraction engine | OpenCV + imagehash pHash dedup |
+
+### 📝 Commit Message
+```
+docs: refresh BOOTSTRAP.md + checkpoint with full project state
+
+Rebuilt stale BOOTSTRAP.md agent handoff doc from scratch to reflect
+current codebase reality. Old version was frozen pre-cyberpunk-theme
+and pre-extraction-APIs, listing only a fraction of the 30 live routes.
+
+- Full 30-route inventory categorized by subsystem
+- Cyberpunk theme (celadon/CRT/glassmorphism) documented
+- LLM library table: 13 curated models, quants, architectures
+- Session-by-session accomplishment log (A-E)
+- Expanded gotchas: deleted files, IDE terminal quirks
+- Appended status_checkpoint.md session E entry
+```
+
+---
+
+**Last Updated:** 2026-07-02 — Cline Session E (Bootstrap Refresh)

@@ -1,3 +1,6 @@
+
+
+
 from flask import Flask, request, jsonify, render_template, send_from_directory
 import yt_dlp
 import os
@@ -8,6 +11,7 @@ import requests # Added for Ollama API calls
 import subprocess # Added for opening folders
 import glob # Added for explorer list
 import time # Added for api_terminals_logs
+import threading
 
 # --- GPU Telemetry (NVML) ---
 try:
@@ -94,47 +98,46 @@ def get_drive_stats():
 #  Top Processes Helper – top 10 by CPU + memory, for Resource Hog table
 # ---------------------------------------------------------------------------
 def get_top_processes(limit=10):
-    """Return the top-N most resource-heavy processes.
-    Frontend expects: [{pid, name, cpu, ram}, ...]  ram in MB."""
-    procs = []
-    try:
-        for proc in psutil.process_iter(["pid", "name", "cpu_percent", "memory_info"]):
-            try:
-                info = proc.info
-                ram_mb = round(info["memory_info"].rss / (1024 * 1024), 1) if info["memory_info"] else 0
-                cpu = info["cpu_percent"] or 0
-                procs.append({
-                    "pid":  info["pid"],
-                    "name": info["name"],
-                    "cpu":  cpu,
-                    "ram":  ram_mb,
-                })
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                continue
-    except Exception:
-        pass
-
-    # Sort by CPU desc, then RAM desc, take top N
+    procs = list()
+    process_list = list(psutil.process_iter(["pid", "name", "memory_info"]))
+    for proc in process_list:
+        try: proc.cpu_percent()
+        except: pass
+    time.sleep(0.1)
+    for proc in process_list:
+        try:
+            info = proc.info
+            ram_mb = round(info["memory_info"].rss / (1024 * 1024), 1) if info["memory_info"] else 0
+            cpu = round(proc.cpu_percent() or 0, 1)
+            if cpu > 0 or ram_mb > 0:
+                procs.append(dict(pid=info["pid"], name=info["name"], cpu=cpu, ram=ram_mb))
+        except:
+            continue
     procs.sort(key=lambda p: (p["cpu"], p["ram"]), reverse=True)
     return procs[:limit]
 
+
 _NVML_INITIALIZED = False
+
 
 def get_gpu_stats():
     """Query NVIDIA GPU via pynvml.  Returns a dict with keys the frontend
-    expects: pct (VRAM %), vram_used (MB), vram_total (MB), temp (C), load (%)."""
+    expects: pct (VRAM %), vram_used (MB), vram_total (MB), temp (C), load (%).
+    Includes an 'error' key explaining why telemetry is unavailable."""
     global _NVML_INITIALIZED
 
     if not _NVML_AVAILABLE:
-        return {"pct": 0, "vram_used": 0, "vram_total": 0, "temp": 0, "load": 0}
+        return {"pct": 0, "vram_used": 0, "vram_total": 0, "temp": 0, "load": 0,
+                "error": "pynvml not installed — run: pip install nvidia-ml-py"}
 
-    # Lazy-init NVML on first call (handles subprocess / background launch)
+    # Lazy-init NVML on first call
     if not _NVML_INITIALIZED:
         try:
             pynvml.nvmlInit()
             _NVML_INITIALIZED = True
-        except Exception:
-            return {"pct": 0, "vram_used": 0, "vram_total": 0, "temp": 0, "load": 0}
+        except Exception as e:
+            return {"pct": 0, "vram_used": 0, "vram_total": 0, "temp": 0, "load": 0,
+                    "error": f"NVML init failed: {e}"}
 
     try:
         handle = pynvml.nvmlDeviceGetHandleByIndex(0)
@@ -156,16 +159,146 @@ def get_gpu_stats():
             "temp":       temp,
             "load":       gpu_load,
         }
-    except Exception:
-        return {"pct": 0, "vram_used": 0, "vram_total": 0, "temp": 0, "load": 0}
+    except Exception as e:
+        return {"pct": 0, "vram_used": 0, "vram_total": 0, "temp": 0, "load": 0,
+                "error": f"GPU query failed: {e}"}
+
+# ---------------------------------------------------------------------------
+#  EXTRACTION — OpenCV frame extraction + perceptual hash deduplication
+# ---------------------------------------------------------------------------
+
+_extract_status = {
+    "running": False,
+    "paused":  False,
+    "stopped": False,
+    "progress": 0,
+    "total_frames": 0,
+    "saved": 0,
+    "skipped": 0,
+    "current_file": None,
+    "output_folder": None,
+    "error": None,
+}
+_extract_lock = threading.Lock()
+_extract_thread = None
+
+
+def _run_extraction(video_path, output_folder, frame_interval, dedup_threshold, enable_dedup):
+    """Background thread: open video, extract frames, optionally deduplicate via pHash."""
+    global _extract_status
+
+    try:
+        import cv2
+        import imagehash
+        from PIL import Image as _PILImage
+    except ImportError as e:
+        with _extract_lock:
+            _extract_status["running"] = False
+            _extract_status["error"] = f"Missing dependency: {e}"
+        return
+
+    cap = None
+    try:
+        cap = cv2.VideoCapture(video_path)
+        if not cap.isOpened():
+            with _extract_lock:
+                _extract_status["error"] = f"Cannot open video: {video_path}"
+                _extract_status["running"] = False
+            return
+
+        total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        with _extract_lock:
+            _extract_status["total_frames"] = total
+
+        os.makedirs(output_folder, exist_ok=True)
+
+        if enable_dedup:
+            try:
+                last_hash = imagehash.phash(_PILImage.new("RGB", (1, 1)))
+            except Exception:
+                last_hash = None
+        else:
+            last_hash = None
+
+        saved  = 0
+        skipped = 0
+        frame_idx = 0
+
+        while True:
+            with _extract_lock:
+                if _extract_status["stopped"]:
+                    break
+                paused = _extract_status["paused"]
+
+            if paused:
+                time.sleep(0.2)
+                continue
+
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            frame_idx += 1
+
+            if frame_idx % frame_interval != 0:
+                continue
+
+            with _extract_lock:
+                _extract_status["progress"] = frame_idx
+
+            if enable_dedup and last_hash is not None:
+                rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                pil_img = _PILImage.fromarray(rgb)
+                try:
+                    cur_hash = imagehash.phash(pil_img)
+                except Exception:
+                    cur_hash = None
+
+                if cur_hash is not None and last_hash is not None:
+                    diff = cur_hash - last_hash
+                    if diff < dedup_threshold:
+                        skipped += 1
+                        with _extract_lock:
+                            _extract_status["skipped"] = skipped
+                        continue
+                last_hash = cur_hash
+
+            out_name = f"frame_{frame_idx:06d}.png"
+            out_path = os.path.join(output_folder, out_name)
+            cv2.imwrite(out_path, frame)
+            saved += 1
+
+            with _extract_lock:
+                _extract_status["saved"]       = saved
+                _extract_status["skipped"]      = skipped
+                _extract_status["current_file"] = out_name
+
+    except Exception as e:
+        with _extract_lock:
+            _extract_status["error"] = str(e)
+    finally:
+        if cap is not None:
+            cap.release()
+        with _extract_lock:
+            _extract_status["running"] = False
+            _extract_status["progress"] = _extract_status.get("total_frames", 0)
+
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    # Set initial path to 'D:\AI\Projects' for the explorer
+    explorer_initial_path = 'D:\\AI\\Projects'
+    # Use double backslashes for JavaScript string literal in the template
+    explorer_initial_path_js = explorer_initial_path.replace('\\', '\\\\')
+    return render_template('index.html', explorer_initial_path=explorer_initial_path_js)
 
 @app.route('/api/stats', methods=['GET'])
 def api_stats():
-    cpu_load = psutil.cpu_percent(interval=1)
+    # Non-blocking CPU measurement: call once with interval=None to get
+    # a reading since the last call, then sleep a tiny bit for accuracy.
+    psutil.cpu_percent(interval=None)  # warm-up (first call returns 0)
+    time.sleep(0.15)
+    cpu_load = psutil.cpu_percent(interval=None)
     ram = psutil.virtual_memory()
     ram_pct = ram.percent
     ram_used_gb = round(ram.used / (1024**3), 2)
@@ -223,13 +356,16 @@ def api_download_status():
 @app.route('/api/ollama/models', methods=['GET'])
 def api_ollama_models():
     try:
-        response = requests.get('http://localhost:11434/api/tags')
-        response.raise_for_status() # Raise an exception for HTTP errors
-        return jsonify(response.json())
+        response = requests.get('http://localhost:11434/api/tags', timeout=5)
+        response.raise_for_status()
+        data = response.json()
+        return jsonify(data)
     except requests.exceptions.ConnectionError:
-        return jsonify({"error": "Ollama server not reachable. Is it running?"}), 500
+        return jsonify({"error": "Ollama not running on port 11434", "models": []}), 503
+    except requests.exceptions.Timeout:
+        return jsonify({"error": "Ollama request timed out", "models": []}), 503
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e), "models": []}), 500
 
 # ---------------------------------------------------------------------------
 #  PROMPT GENERATOR — prompt bank + Ollama streaming generation
@@ -368,6 +504,22 @@ def api_open_folder():
     except Exception as e:
         return jsonify({"error": f"Could not open folder: {str(e)}"}), 500
 
+
+@app.route('/api/open-file-dir', methods=['GET'])
+def api_open_file_dir():
+    """Open the parent directory of a file in Windows Explorer."""
+    file_path = request.args.get('path')
+    if not file_path or not os.path.exists(file_path):
+        return jsonify({"error": "File not found"}), 404
+    try:
+        parent_dir = os.path.dirname(file_path)
+        if os.path.isdir(parent_dir):
+            os.startfile(parent_dir)
+            return jsonify({"message": "File directory opened"}), 200
+        return jsonify({"error": "Parent directory not found"}), 404
+    except Exception as e:
+        return jsonify({"error": f"Could not open directory: {str(e)}"}), 500
+
 # ---------------------------------------------------------------------------
 #  LAUNCHERS – scan D:\AI\Launchers for executable files
 # ---------------------------------------------------------------------------
@@ -421,12 +573,28 @@ def api_open_launchers_folder():
     return jsonify({"error": "Launchers directory not found"}), 404
 
 
-# A simple endpoint for streaming logs from a file. This is a very basic implementation.
+# In-memory terminal log buffers — each key is a process name, value is a list of lines.
+_terminal_buffers = {}
+_terminal_max_lines = 500
+@app.route('/api/terminals/clear', methods=['GET'])
+def api_terminals_clear():
+    """Clear the log buffer for a specific process key."""
+    key = request.args.get('key', '')
+    if key in _terminal_buffers:
+        del _terminal_buffers[key]
+    return jsonify({"message": "Cleared logs for " + key})
+
+
+@app.route('/api/terminals/clear-all', methods=['GET'])
+def api_terminals_clear_all():
+    """Clear all terminal log buffers."""
+    _terminal_buffers.clear()
+    return jsonify({"message": "All terminal logs cleared"})
 @app.route('/api/terminals/logs', methods=['GET'])
 def api_terminals_logs():
     log_file_path = "scc_server.log" # Assume scc_server.log is in the same directory
     if not os.path.exists(log_file_path):
-        return "", 204 # No content if log file doesn't exist
+        return jsonify(dict(streams=_terminal_buffers))
 
     def generate():
         with open(log_file_path, 'r') as f:
@@ -573,6 +741,291 @@ def api_launch_kobold():
         return jsonify({"error": str(e)}), 500
 
 
+# ---------------------------------------------------------------------------
+#  GGUF MODEL LISTING — scan D:\AI\Models\LLM for .gguf files
+# ---------------------------------------------------------------------------
+_GGUF_DIR = r"D:\AI\Models\LLM"
+
+
+@app.route('/api/models', methods=['GET'])
+def api_models():
+    """Return every .gguf file found in the LLM models directory."""
+    models = []
+    if os.path.isdir(_GGUF_DIR):
+        try:
+            for entry in sorted(os.scandir(_GGUF_DIR), key=lambda e: e.name.lower()):
+                if entry.is_file() and entry.name.lower().endswith(".gguf"):
+                    models.append(entry.name)
+        except Exception:
+            pass
+    return jsonify({"models": models})
+
+
+# ---------------------------------------------------------------------------
+#  PANIC BUTTON — kill all AI backends at once
+# ---------------------------------------------------------------------------
+
+
+@app.route('/api/panic', methods=['GET'])
+def api_panic():
+    """Kill every known AI backend process — KoboldCPP, Ollama, LM Studio."""
+    targets = ["koboldcpp.exe", "ollama.exe", "LM Studio.exe"]
+    killed = {}
+    for exe in targets:
+        killed[exe] = 0
+        try:
+            for proc in psutil.process_iter(["name", "pid"]):
+                try:
+                    if proc.info["name"] == exe:
+                        proc.kill()
+                        killed[exe] += 1
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+        except Exception:
+            pass
+    total = sum(killed.values())
+    return jsonify({"message": f"Terminated {total} AI process(es)", "killed": killed}), 200
+
+
+# ---------------------------------------------------------------------------
+#  SEARCH — recursive filename search across D:\AI
+# ---------------------------------------------------------------------------
+_SEARCH_ROOTS = [r"D:\AI", r"D:\AI\Projects", r"D:\AI\Models"]
+_SEARCH_MAX_RESULTS = 100
+_SEARCH_MAX_DEPTH = 4
+
+
+@app.route('/api/search', methods=['GET'])
+def api_search():
+    """Recursive filename search under configured roots.
+    Returns [{name, size, path}, ...] limited to _SEARCH_MAX_RESULTS."""
+    query = request.args.get('q', '').strip().lower()
+    if not query or len(query) < 2:
+        return jsonify({"results": []})
+
+    results = []
+    for root in _SEARCH_ROOTS:
+        if not os.path.isdir(root):
+            continue
+        try:
+            for dirpath, _dirnames, filenames in os.walk(root):
+                depth = dirpath.replace(root, "").count(os.sep)
+                if depth > _SEARCH_MAX_DEPTH:
+                    _dirnames.clear()
+                    continue
+                for name in filenames:
+                    if query in name.lower():
+                        fp = os.path.join(dirpath, name)
+                        try:
+                            size_mb = round(os.path.getsize(fp) / (1024 * 1024), 2)
+                        except OSError:
+                            size_mb = 0
+                        results.append({
+                            "name": name,
+                            "size": f"{size_mb} MB" if size_mb >= 1 else f"{round(size_mb * 1024)} KB",
+                            "path": fp,
+                        })
+                        if len(results) >= _SEARCH_MAX_RESULTS:
+                            break
+                if len(results) >= _SEARCH_MAX_RESULTS:
+                    break
+        except Exception:
+            continue
+        if len(results) >= _SEARCH_MAX_RESULTS:
+            break
+
+    return jsonify({"results": results})
+
+
+# ---------------------------------------------------------------------------
+#  SDC — DATASET CURATOR (image scanning, thumbnails, VLM tagging)
+# ---------------------------------------------------------------------------
+_IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.tiff', '.tif'}
+_THUMB_SIZE = (320, 240)
+
+# Lazy-import PIL so the server still boots without it
+_PIL_AVAILABLE = False
+try:
+    from PIL import Image as _PILImage
+    import io as _io
+    _PIL_AVAILABLE = True
+except Exception:
+    pass
+
+
+@app.route('/api/sdc/scan', methods=['GET'])
+def api_sdc_scan():
+    """Scan a directory recursively for image files.
+    Returns {images: [{name, path}, ...]}."""
+    path = request.args.get('path', '').strip()
+    if not path or not os.path.isdir(path):
+        return jsonify({"error": "Invalid or missing directory path"}), 400
+
+    images = []
+    try:
+        for entry in sorted(os.scandir(path), key=lambda e: e.name.lower()):
+            if not entry.is_file():
+                continue
+            _, ext = os.path.splitext(entry.name)
+            if ext.lower() in _IMAGE_EXTENSIONS:
+                images.append({"name": entry.name, "path": entry.path})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    return jsonify({"images": images})
+
+
+@app.route('/api/sdc/thumb', methods=['GET'])
+def api_sdc_thumb():
+    """Serve a thumbnail of the image at the given path.
+    Uses PIL if available; otherwise falls back to serving the full file."""
+    img_path = request.args.get('path', '').strip()
+    if not img_path or not os.path.isfile(img_path):
+        return jsonify({"error": "File not found"}), 404
+
+    if _PIL_AVAILABLE:
+        try:
+            im = _PILImage.open(img_path)
+            im.thumbnail(_THUMB_SIZE)
+            buf = _io.BytesIO()
+            fmt = im.format or "JPEG"
+            if fmt.upper() == "GIF":
+                fmt = "PNG"
+            im.save(buf, format=fmt)
+            buf.seek(0)
+            return app.response_class(buf.read(), mimetype=f"image/{fmt.lower()}")
+        except Exception:
+            pass  # fall through to raw serve
+
+    # Fallback: serve the file directly
+    return send_from_directory(
+        os.path.dirname(img_path),
+        os.path.basename(img_path),
+    )
+
+
+@app.route('/api/sdc/tag-vlm', methods=['POST'])
+def api_sdc_tag_vlm():
+    """Tag an image using an Ollama vision model.
+    Expects JSON: {path, model, instruction}
+    Returns {tags: "..."}"""
+    data = request.get_json(silent=True) or {}
+    img_path    = data.get("path", "")
+    model       = data.get("model", "")
+    instruction = data.get("instruction", "Describe this image in detail.")
+
+    if not img_path or not os.path.isfile(img_path):
+        return jsonify({"error": "Image file not found"}), 404
+    if not model:
+        return jsonify({"error": "model is required"}), 400
+
+    # Read & base64-encode the image
+    try:
+        with open(img_path, "rb") as f:
+            img_bytes = f.read()
+    except Exception as e:
+        return jsonify({"error": f"Cannot read image: {e}"}), 500
+
+    import base64
+    img_b64 = base64.b64encode(img_bytes).decode("utf-8")
+
+    payload = {
+        "model":  model,
+        "prompt": instruction,
+        "images": [img_b64],
+        "stream": False,
+    }
+
+    try:
+        resp = requests.post(
+            "http://localhost:11434/api/generate",
+            json=payload,
+            timeout=(10, 120),
+        )
+        resp.raise_for_status()
+        result = resp.json()
+        tags = result.get("response", "").strip()
+        return jsonify({"tags": tags})
+    except requests.exceptions.ConnectionError:
+        return jsonify({"error": "Ollama is not running on port 11434"}), 503
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/extract', methods=['POST'])
+def api_extract():
+    """Start frame extraction from a video file.
+    JSON body: {path, output_folder?, frame_interval?, dedup_threshold?, enable_dedup?}"""
+    global _extract_thread
+
+    with _extract_lock:
+        if _extract_status["running"]:
+            return jsonify({"error": "Extraction already in progress"}), 409
+
+    data = request.get_json(silent=True) or {}
+    video_path      = data.get("path", "").strip()
+    output_folder   = data.get("output_folder", "").strip()
+    frame_interval  = int(data.get("frame_interval", 30))
+    dedup_threshold = int(data.get("dedup_threshold", 12))
+    enable_dedup    = data.get("enable_dedup", True)
+
+    if not video_path or not os.path.isfile(video_path):
+        return jsonify({"error": "Video file not found: " + video_path}), 404
+
+    if not output_folder:
+        base, _ = os.path.splitext(video_path)
+        output_folder = base + "_frames"
+
+    with _extract_lock:
+        _extract_status.update({
+            "running": True, "paused": False, "stopped": False,
+            "progress": 0, "total_frames": 0, "saved": 0, "skipped": 0,
+            "current_file": None, "output_folder": output_folder, "error": None,
+        })
+
+    _extract_thread = threading.Thread(
+        target=_run_extraction,
+        args=(video_path, output_folder, frame_interval, dedup_threshold, enable_dedup),
+        daemon=True,
+    )
+    _extract_thread.start()
+
+    return jsonify({
+        "message": "Extraction started",
+        "output_folder": output_folder,
+        "frame_interval": frame_interval,
+        "dedup_threshold": dedup_threshold,
+        "enable_dedup": enable_dedup,
+    }), 202
+
+
+@app.route('/api/extract-status', methods=['GET'])
+def api_extract_status():
+    """Return the current extraction telemetry."""
+    with _extract_lock:
+        status = dict(_extract_status)
+    return jsonify(status)
+
+
+@app.route('/api/extract-stop', methods=['POST'])
+def api_extract_stop():
+    """Stop a running extraction."""
+    with _extract_lock:
+        if not _extract_status["running"]:
+            return jsonify({"error": "No extraction running"}), 409
+        _extract_status["stopped"] = True
+    return jsonify({"message": "Stop signal sent"}), 200
+
+
+@app.route('/api/extract-pause', methods=['POST'])
+def api_extract_pause():
+    """Toggle pause on a running extraction."""
+    with _extract_lock:
+        if not _extract_status["running"]:
+            return jsonify({"error": "No extraction running"}), 409
+        _extract_status["paused"] = not _extract_status["paused"]
+        new_state = "paused" if _extract_status["paused"] else "resumed"
+    return jsonify({"message": f"Extraction {new_state}"}), 200
 if __name__ == '__main__':
     app.run(debug=False, port=9999)
 

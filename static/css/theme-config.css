@@ -1,0 +1,67 @@
+:root {
+    /* Primary Backgrounds & Surfaces (Deeps, Charcoals, Slates) */
+    --bg-void:           #0F111A; /* Deepest background, almost black */
+    --bg-primary:        #151824; /* Primary surface, e.g., main content area */
+    --bg-card:           rgba(22, 25, 41, 0.7); /* Card background with transparency */
+    --bg-input:          rgba(25, 29, 52, 0.65); /* Input field backgrounds */
+
+    /* Borders & Separators */
+    --border:            rgba(255, 255, 255, 0.06); /* Subtle, light border */
+    --border-dark:       rgba(0, 0, 0, 0.15); /* Darker border for depth */
+    --border-glow-soft:  rgba(168, 85, 247, 0.15); /* Soft glow for interactivity */
+    --border-glow-accent:rgba(168, 85, 247, 0.45); /* Stronger glow for active states */
+
+    /* Text Colors */
+    --text-primary:      #F1F2F6; /* Main text color, very light */
+    --text-secondary:    #B0B8D0; /* Secondary text, slightly muted */
+    --text-muted:        #7F8CA3; /* Muted text for descriptions, hints */
+    --text-highlight:    #E0E7FF; /* Text for highlights or strong emphasis */
+
+    /* Accent Colors (Hybrid: Purple, Pink, Celadon-Teal) */
+    --accent-purple:     #A855F7; /* Primary accent purple */
+    --accent-pink:       #EC4899; /* Secondary accent pink */
+    --accent-celadon:    #2DD4BF; /* Energetic accent, for active states/telemetry */
+    --accent-cyan:       #22D3EE; /* Complementary cyan (from original palette) */
+    --accent-green:      #84CC16; /* For positive indicators */
+
+    /* Status Colors */
+    --status-success:    #10B981; /* Green for success */
+    --status-warning:    #F59E0B; /* Amber for warnings */
+    --status-danger:     #F43F5E; /* Red for errors/danger */
+
+    /* Gradients */
+    --gradient-purple-pink: linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-pink) 100%);
+    --gradient-cyan-purple: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-purple) 100%);
+    --gradient-celadon: linear-gradient(135deg, var(--accent-celadon) 0%, #38BDF8 100%); /* Celadon to light blue */
+
+    /* Font Families */
+    --font-heading: 'Outfit', sans-serif;
+    --font-body:    'Outfit', sans-serif;
+    --font-mono:    'JetBrains Mono', monospace;
+
+    /* Spacing & Sizing */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+
+    /* Border Radii */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 18px;
+    --radius-full: 9999px;
+
+    /* Shadow Effects */
+    --shadow-sm: 0 4px 10px rgba(0,0,0,0.1);
+
+    /* Helper RGB values for transparent variants */
+    --accent-purple-rgb: 168, 85, 247;
+    --accent-pink-rgb:   236, 72, 153;
+    --accent-celadon-rgb: 45, 212, 191;
+    --accent-cyan-rgb:   34, 211, 238;
+    --status-success-rgb: 16, 185, 129;
+    --status-danger-rgb: 244, 63, 94;
+    --text-muted-rgb: 87, 94, 117;
+    --bg-primary-rgb: 15, 17, 26;
+}
