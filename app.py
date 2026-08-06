@@ -410,6 +410,37 @@ def _run_extraction(video_path, output_folder, frame_interval, dedup_threshold, 
             _extract_status["progress"] = _extract_status.get("total_frames", 0)
 
 
+from flask import send_file
+from pathlib import Path
+
+@app.route('/api/comfy/latest_output')
+def serve_latest_comfy_output():
+    candidate_dirs = [
+        Path(r"D:\AI\Projects\ComfyUI\output"),
+        Path(r"D:\AI\Outputs"),
+        Path(r"C:\Users\boben\Desktop\Antigravity outputs"),
+        Path(r"D:\AI\Antigravity outputs")
+    ]
+    valid_exts = {".png", ".jpg", ".jpeg", ".webp"}
+    latest_file = None
+    latest_mtime = 0
+
+    for cdir in candidate_dirs:
+        if cdir.exists() and cdir.is_dir():
+            try:
+                for entry in cdir.iterdir():
+                    if entry.is_file() and entry.suffix.lower() in valid_exts:
+                        mtime = entry.stat().st_mtime
+                        if mtime > latest_mtime:
+                            latest_mtime = mtime
+                            latest_file = entry
+            except Exception:
+                continue
+
+    if latest_file:
+        return send_file(str(latest_file), mimetype='image/png')
+    return jsonify({"error": "No images found"}), 404
+
 @app.route('/')
 def index():
     # Set initial path to 'D:\AI\Projects' for the explorer
