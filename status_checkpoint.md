@@ -210,3 +210,135 @@ and pre-extraction-APIs, listing only a fraction of the 30 live routes.
 ---
 
 **Last Updated:** 2026-07-02 — Cline Session E (Bootstrap Refresh)
+
+---
+
+## 📅 Session: 2026-07-05 — RPG Character Prompt Builder Overhaul (Antigravity)
+
+### ✅ Database Migration & Seed
+- [x] Migrated `prompt_generator.db` to new structure supporting hierarchical dependencies.
+- [x] Created `dropdown_options` and `tag_chips` tables.
+- [x] Populated **288 dropdown options**, **19 quality chips**, and **3 archetype presets** (Dark Sorceress, Cyberpunk Hacker, Gothic Valkyrie).
+
+### ✅ RPG Character Builder UI Rewrite
+- [x] Replaced flat dropdown UI with an RPG-style character sheet interface using 7 tabbed panels.
+- [x] Implemented cascading dependent dropdown trees (e.g., sex/gender -> archetype, environment -> location, etc.).
+- [x] Added live color-coded prompt preview rendering in real-time.
+- [x] Integrated character card saving/loading directly to SQLite backend.
+- [x] Created direct ComfyUI API endpoint injection for Flux generations.
+- [x] Removed all NSFW/SFW filtering restrictions per user direction.
+
+### ✅ Collapsible LoRAs & Trigger Word Stack
+- [x] Wrapped LoRA stack manager in an accordion-style collapsible interface.
+- [x] Integrated trigger words edit field next to weight sliders for each active LoRA.
+- [x] Persisted custom trigger words via local storage.
+- [x] Configured /api/loras to scan directory recursively (unlocking `/steps` checkpoints and training iterations).
+- [x] Automatically inject active LoRA tags and their associated trigger words into the final prompt builder string.
+
+---
+
+**Last Updated:** 2026-07-05 — Antigravity Session (RPG Overhaul Complete)
+
+---
+
+## 📅 Session: 2026-07-05 — Harlequin Archetypes, Clones & Custom Prompt Vault (Antigravity)
+
+### ✅ Prompt Truncation & Backend Scaling
+- [x] Swapped max generation tokens constraint from 400 to 1024/2048 to prevent truncated prompts.
+- [x] Implemented a model picker header, querying Ollama dynamically (`/api/ollama_models`) and updating active settings.
+- [x] Aligned dynamic preset workers with the user-selected active Ollama model.
+
+### ✅ Harlequin Romance novel Archetypes & Gender Hardline
+- [x] Hardlined genders strictly to Male and Female, removing other designations from default listings.
+- [x] Migrated `archetype` selections from DND roles to Harlequin Romance Novel characters (Brooding Billionaire, Rogue Rake, Dashing Marquess, Scandalous Widow, Innocent Governess, etc.).
+- [x] Expanded anatomy options covering thighs, waist, ass, tits, arms, and styles matching romance novels.
+- [x] Doubled the options inside the Lighting tab.
+
+### ✅ Duplicates & Custom Text Inputs
+- [x] Enabled custom text fields alongside every option selector to support arbitrary user additions.
+- [x] Added duplicate clone triggers (`+` button) to spawn up to 3 separate duplicate option selector slots per card.
+- [x] Integrated copy clipboard logic with fallbacks for non-secure HTTP boundaries.
+- [x] Rebuilt favorites list into a SQLite-backed Prompt Vault database.
+
+---
+
+**Last Updated:** 2026-07-05 — Antigravity Session (Harlequin & Clones Complete)
+
+---
+
+## 📅 Session: 2026-07-05 — Locks, Tab Persistence & Worker VRAM Flushing (Antigravity)
+
+### ✅ Tab Refresh & State Persistence
+- [x] Implemented `localStorage` state serialization on the frontend. The entire builder state (selections, clones, custom text inputs, and locks) is saved on change and restored automatically on page reload.
+- [x] This prevents the prompt generator from losing user choices when switching tabs inside the parent Command Center iframe dashboard.
+
+### ✅ Model Locking Mechanic
+- [x] Added padlock icons (`🔓`/`🔒`) next to every option row.
+- [x] Checking lock locks the value.
+- [x] Rolling all random values (`Roll Unlocked`) skips locked values, preserving choices.
+
+### ✅ Background VRAM Flush & Model Bypass
+- [x] Added `keep_alive: 0` to the Ollama preset worker requests, ensuring VRAM is fully freed between background preset updates.
+- [x] Injected system prompt instructions asking models to ignore alignment filters to improve tag expansion on standard LLMs.
+
+---
+
+**Last Updated:** 2026-07-05 — Antigravity Session (Overhaul Polished)
+
+---
+
+## 📅 Session: 2026-07-05 — Single Launch Ignition & Kill Button Integration (Antigravity)
+
+### ✅ Simplified Dashboard Ignition Panel
+- [x] Overhauled the Command Center Prompt Generator tab dashboard.
+- [x] Removed the model select dropdowns and the backend select boxes from the ignition screen.
+- [x] Simplified the setup to a single "Launch Prompt Workstation" button.
+
+### ✅ Integrated Terminate/Kill Action
+- [x] Added a new backend route `/api/kill-prompt-generator` that scans for running `prompt_generator_app.py` process namespaces or port `9669` sockets and halts them.
+- [x] Exposed a "Kill Workstation" button directly in the active iframe tab header to shut down the server process on demand.
+
+---
+
+**Last Updated:** 2026-07-05 — Antigravity Session (Dashboard Ignition Complete)
+
+---
+
+## 📅 Session: 2026-07-05 — Ollama Models List Filtering (Antigravity)
+
+### ✅ Whitelist Filter for Prompt Generator Models
+- [x] Implemented a whitelist query filter on the `/api/ollama_models` route.
+- [x] Only models matching keyword strings (`nsfw`, `uncensored`, `dolphin`, `hermes`, `lexi`, `hades`, `prompt-gen`) are returned to the picker dropdown.
+- [x] This screens out unrelated vision, coding, and heavily aligned base models to keep the picker list lightweight and targeted to uncensored prompt expansion.
+
+---
+
+**Last Updated:** 2026-07-05 — Antigravity Session (Model List Filter Complete)
+
+---
+
+## 📅 Session: 2026-07-05 — Infinite Chaos: Global Dropdown Customization (Antigravity)
+
+### ✅ Complete Dropdown Customization
+- [x] Overhauled the `/api/section/` endpoint in the Prompt Workstation to inject dynamic options into *every* dropdown field.
+- [x] Implemented a background thread `cache_hydrator_worker()` that cycles through every visual attribute field (build type, breast shape, hip curve, thigh description, hair, hosiery, lighting, camera angles, locations, time, shadow styling, output modes, etc.).
+- [x] The worker pre-generates batches of 15 creative, uncensored visual items using the active LLM backend and caches them.
+- [x] Pre-populated choices are prepended with `✨` emoji tags, refreshing with new selections on every workstation tab refresh or reload.
+
+---
+
+**Last Updated:** 2026-07-05 — Antigravity Session (Infinite Chaos Overhaul Complete)
+
+---
+
+## 📅 Session: 2026-07-06 — Batch Expansion & Local Prompts Storage (Antigravity)
+
+### ✅ Local Batch Expansion Module
+- [x] Integrated a new UI sub-module **Batch Expansion** inside the Prompt Workstation output panel.
+- [x] Enables batch prompt generation loops with configurable run lengths (e.g. 5, 10, 20 runs).
+- [x] Added randomization modes: **Randomize Unlocked** (respects UI settings locks, picking new choices only for unlocked features) and **Randomize All Options**.
+- [x] Added automated prompt writing inside the backend: expanded prompts are automatically written to `D:\AI\Prompts` with filenames matching `prompt_YYYYMMDD_HHMMSS_idx.txt`.
+
+---
+
+**Last Updated:** 2026-07-06 — Antigravity Session (Batch Expansion Complete)

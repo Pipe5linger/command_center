@@ -5,25 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sanctuary Command Center</title>
     <meta name="description" content="Unified AI workstation dashboard - monitor GPU, launch models, generate prompts, curate datasets.">
+    <link rel="icon" href="/favicon.ico" type="image/svg+xml">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <style>
         :root {
             --bg-void:      #060810;
             --bg-primary:   #0A0C14;
             --bg-secondary: #0F111A;
-            --bg-card:      rgba(12, 14, 26, 0.8);
-            --bg-input:     rgba(18, 22, 42, 0.7);
-            --border:       rgba(255, 255, 255, 0.06);
-            --border-glow:  rgba(45, 212, 191, 0.35);
+            --bg-card:      rgba(12, 14, 26, 0.7);
+            --bg-input:     rgba(18, 22, 42, 0.4);
+            --border:       rgba(255, 255, 255, 0.05);
+            --border-glow:  rgba(45, 212, 191, 0.3);
             --text-primary: #F1F2F6;
             --text-secondary:#9FA4BC;
-            --text-muted:   #575E75;
+            --text-muted:   #4A4F6B;
             --accent:       #A855F7;
             --accent-cyan:  #22D3EE;
             --accent-pink:  #EC4899;
             --accent-celadon: #2DD4BF;
-            --accent-glow:  rgba(168, 85, 247, 0.22);
-            --accent-glow-celadon: rgba(45, 212, 191, 0.25);
+            --accent-glow:  rgba(168, 85, 247, 0.2);
+            --accent-glow-celadon: rgba(45, 212, 191, 0.2);
             --danger:       #F43F5E;
             --success:      #10B981;
             --warning:      #F59E0B;
@@ -40,88 +42,72 @@
             color: var(--text-primary);
             min-height: 100vh;
             overflow-x: hidden;
-            position: relative;
             background-image:
-                radial-gradient(ellipse at 12% 8%,  rgba(45,212,191,0.08) 0%, transparent 55%),
-                radial-gradient(ellipse at 85% 15%, rgba(168,85,247,0.1) 0%, transparent 50%),
-                radial-gradient(ellipse at 50% 90%, rgba(34,211,238,0.05) 0%, transparent 50%),
-                repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(45,212,191,0.012) 2px,rgba(45,212,191,0.012) 4px);
-        }
-        body::after {
-            content: ''; position: fixed; inset: 0; z-index: 99999; pointer-events: none;
-            background: repeating-linear-gradient(0deg, rgba(0,0,0,0.025) 0px, rgba(0,0,0,0.025) 1px, transparent 1px, transparent 2px);
-            opacity: 0.5;
+                radial-gradient(ellipse at 12% 8%, rgba(45,212,191,0.06) 0%, transparent 55%),
+                radial-gradient(ellipse at 85% 15%, rgba(168,85,247,0.08) 0%, transparent 50%),
+                repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(45,212,191,0.005) 2px,rgba(45,212,191,0.005) 4px);
         }
 
         /* ---- SCROLLBAR ---- */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(45,212,191,0.2); border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(45,212,191,0.45); }
+        ::-webkit-scrollbar-thumb { background: rgba(45,212,191,0.15); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(45,212,191,0.35); }
 
         /* ---- HEADER ---- */
         header {
             display: flex; align-items: center; justify-content: space-between;
-            padding: 14px 36px;
-            border-bottom: 1px solid rgba(45,212,191,0.12);
-            background: rgba(7,9,16,0.94);
-            backdrop-filter: blur(28px) saturate(160%);
+            padding: 16px 36px;
+            border-bottom: 1px solid rgba(45,212,191,0.08);
+            background: rgba(7,9,16,0.85);
+            backdrop-filter: blur(28px);
             position: sticky; top: 0; z-index: 200;
-            box-shadow: 0 1px 20px rgba(45,212,191,0.05);
         }
         .header-logo { display: flex; align-items: center; gap: 14px; }
         .header-logo .badge {
             background: var(--gradient-celadon);
-            padding: 5px 12px; border-radius: 8px;
-            font-size: 11px; font-weight: 800; letter-spacing: 1.5px;
-            box-shadow: 0 0 20px var(--accent-glow-celadon);
-            animation: badgePulse 3s ease-in-out infinite;
+            padding: 4px 10px; border-radius: 6px;
+            font-size: 11px; font-weight: 800; letter-spacing: 1px;
+            box-shadow: 0 0 16px var(--accent-glow-celadon);
         }
-        @keyframes badgePulse {
-            0%, 100% { box-shadow: 0 0 16px rgba(45,212,191,0.2); }
-            50%      { box-shadow: 0 0 28px rgba(45,212,191,0.45); }
-        }
-        .header-logo h1 { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+        .header-logo h1 { font-size: 16px; font-weight: 700; }
         #vramBanner {
             font-size: 12px; font-weight: 600;
             color: var(--accent-celadon);
             font-family: 'JetBrains Mono', monospace;
-            background: rgba(45,212,191,0.05);
-            border: 1px solid rgba(45,212,191,0.18);
-            padding: 6px 14px; border-radius: 8px;
-            box-shadow: 0 0 10px rgba(45,212,191,0.06);
+            background: rgba(45,212,191,0.03);
+            border: 1px solid rgba(45,212,191,0.1);
+            padding: 5px 12px; border-radius: 6px;
         }
         .header-time { font-size: 12px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
 
         /* ---- TABS NAV ---- */
         .tabs-nav {
-            display: flex; gap: 6px; flex-wrap: wrap;
-            padding: 12px 36px;
-            background: rgba(10,12,20,0.75);
-            border-bottom: 1px solid rgba(45,212,191,0.08);
+            display: flex; gap: 4px; flex-wrap: wrap;
+            padding: 10px 36px;
+            background: rgba(10,12,20,0.6);
+            border-bottom: 1px solid rgba(45,212,191,0.05);
             backdrop-filter: blur(12px);
         }
         .tab-btn {
             background: transparent;
             border: 1px solid transparent;
             color: var(--text-secondary);
-            padding: 9px 18px; font-size: 13px; font-weight: 600;
-            border-radius: 9px;
-            display: flex; align-items: center; gap: 7px;
+            padding: 8px 14px; font-size: 12px; font-weight: 600;
+            border-radius: 8px;
+            display: flex; align-items: center; gap: 6px;
             transition: all 0.2s; cursor: pointer;
-            white-space: nowrap;
         }
         .tab-btn:hover {
-            color: var(--text-primary);
-            background: rgba(45,212,191,0.04);
-            border-color: rgba(45,212,191,0.15);
-            text-shadow: 0 0 8px rgba(45,212,191,0.2);
+            color: #fff;
+            background: rgba(45,212,191,0.03);
+            border-color: rgba(45,212,191,0.1);
         }
         .tab-btn.active {
-            color: var(--text-primary);
-            background: rgba(12,14,26,0.85);
-            border-color: rgba(45,212,191,0.35);
-            box-shadow: 0 0 22px rgba(45,212,191,0.15), inset 0 0 15px rgba(45,212,191,0.04);
+            color: #fff;
+            background: rgba(12,14,26,0.8);
+            border-color: rgba(45,212,191,0.25);
+            box-shadow: 0 0 16px rgba(45,212,191,0.1);
             position: relative;
         }
         .tab-btn.active::after {
@@ -129,281 +115,275 @@
             position: absolute; bottom: -1px; left: 15%; width: 70%; height: 2px;
             background: var(--gradient-celadon);
             border-radius: 2px;
-            box-shadow: 0 0 8px rgba(45,212,191,0.4);
         }
 
         /* ---- TAB CONTENT ---- */
-        .tab-content { display: none; padding: 28px 36px; animation: fadeIn 0.25s ease-out; }
+        .tab-content { display: none; padding: 24px 36px; animation: fadeIn 0.2s ease-out; }
         .tab-content.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* ---- LAYOUT ---- */
-        .panel-grid-2 { display: grid; grid-template-columns: 2fr 1fr; gap: 22px; }
-        .panel-grid-equal { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
-        .panel-grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 22px; }
+        /* ---- LAYOUT & RESIZABLE PANELS ---- */
+        .panel-grid-2 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+        .panel-grid-equal { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .panel-grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
 
         .panel {
             background: var(--bg-card);
-            border: 1px solid rgba(45,212,191,0.08);
-            border-radius: 18px;
-            padding: 22px;
-            backdrop-filter: blur(16px) saturate(140%);
-            transition: border-color 0.3s, box-shadow 0.3s;
+            border: 1px solid rgba(255,255,255,0.03);
+            border-radius: 14px;
+            padding: 18px;
+            backdrop-filter: blur(12px);
+            transition: border-color 0.2s, box-shadow 0.2s;
             position: relative;
-            overflow: hidden;
+            resize: both;
+            overflow: auto;
+            min-width: 250px;
+            min-height: 180px;
         }
         .panel:hover {
-            border-color: rgba(45,212,191,0.15);
-            box-shadow: 0 0 20px rgba(45,212,191,0.05);
+            border-color: rgba(45,212,191,0.12);
+            box-shadow: 0 0 16px rgba(45,212,191,0.04);
         }
-        .panel::before {
-            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(45,212,191,0.15), transparent);
-            opacity: 0; transition: opacity 0.3s;
+        .live-glow-koboldcpp {
+            border-color: rgba(34, 211, 238, 0.6) !important;
+            box-shadow: 0 0 22px rgba(34, 211, 238, 0.25) !important;
         }
-        .panel:hover::before { opacity: 1; }
+        .live-glow-ollama {
+            border-color: rgba(168, 85, 247, 0.6) !important;
+            box-shadow: 0 0 22px rgba(168, 85, 247, 0.25) !important;
+        }
+        .live-glow-lmstudio {
+            border-color: rgba(236, 72, 153, 0.6) !important;
+            box-shadow: 0 0 22px rgba(236, 72, 153, 0.25) !important;
+        }
         .panel-title {
-            font-size: 14px; font-weight: 700;
-            margin-bottom: 18px;
+            font-size: 13px; font-weight: 700;
+            margin-bottom: 14px;
             display: flex; align-items: center; justify-content: space-between;
-            border-bottom: 1px solid rgba(45,212,191,0.1);
-            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            padding-bottom: 8px;
         }
-        .panel-title-label { display: flex; align-items: center; gap: 8px; }
 
         /* ---- STAT CARDS ---- */
-        .grid-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 18px; margin-bottom: 22px; }
+        .grid-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 16px; }
         .card-stat {
             background: var(--bg-card);
-            border: 1px solid rgba(45,212,191,0.07);
-            border-radius: 15px; padding: 18px;
-            backdrop-filter: blur(16px) saturate(140%);
+            border: 1px solid rgba(255,255,255,0.03);
+            border-radius: 12px; padding: 14px;
+            backdrop-filter: blur(12px);
             transition: all 0.3s;
+            min-width: 150px;
             position: relative;
-            overflow: hidden;
-        }
-        .card-stat::after {
-            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            background: radial-gradient(ellipse at 80% 0%, rgba(45,212,191,0.04) 0%, transparent 70%);
-            opacity: 0; transition: opacity 0.3s;
         }
         .card-stat:hover {
-            border-color: rgba(45,212,191,0.25);
-            box-shadow: 0 0 22px rgba(45,212,191,0.08);
+            border-color: rgba(45,212,191,0.2);
+            box-shadow: 0 0 16px rgba(45,212,191,0.05);
         }
-        .card-stat:hover::after { opacity: 1; }
+        .card-stat.threshold-warn {
+            border-color: rgba(245,158,11,0.4) !important;
+            box-shadow: 0 0 18px rgba(245,158,11,0.12) !important;
+        }
+        .card-stat.threshold-danger {
+            border-color: rgba(244,63,94,0.5) !important;
+            box-shadow: 0 0 22px rgba(244,63,94,0.18) !important;
+        }
+        .sparkline-canvas {
+            width: 100%; height: 32px; margin-top: 6px;
+            border-radius: 4px;
+            background: rgba(0,0,0,0.15);
+        }
+
+        /* ---- EMERGENCY BAR ---- */
+        .emergency-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            background: rgba(244,63,94,0.04);
+            border: 1px solid rgba(244,63,94,0.12);
+            border-radius: 10px; padding: 10px 16px; margin-bottom: 14px;
+            backdrop-filter: blur(8px);
+        }
+        .emergency-bar .emergency-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        /* ---- FILTER PILLS ---- */
+        .pill {
+            padding: 4px 12px; border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.06);
+            background: rgba(255,255,255,0.02);
+            font-size: 11px; font-weight: 600;
+            color: var(--text-secondary); cursor: pointer;
+            transition: all 0.2s; user-select: none;
+        }
+        .pill:hover { border-color: var(--accent); color: #fff; }
+        .pill.active {
+            background: rgba(45,212,191,0.12); border-color: rgba(45,212,191,0.35);
+            color: #5eead4;
+        }
+
+        /* ---- DRIVE CARDS ---- */
+        .drives-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+        .drive-card {
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.04);
+            border-radius: 10px; padding: 12px;
+            transition: all 0.2s;
+        }
+        .drive-card:hover { border-color: rgba(45,212,191,0.15); }
+        .drive-card.drive-warn { border-color: rgba(245,158,11,0.3); }
+        .drive-card.drive-danger { border-color: rgba(244,63,94,0.35); box-shadow: 0 0 12px rgba(244,63,94,0.08); }
         .stat-header {
-            font-size: 10px; font-weight: 700; text-transform: uppercase;
-            letter-spacing: 1px; color: var(--text-secondary);
-            margin-bottom: 8px; display: flex; justify-content: space-between;
+            font-size: 9px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.8px; color: var(--text-secondary);
+            margin-bottom: 6px; display: flex; justify-content: space-between;
         }
-        .stat-value { font-size: 24px; font-weight: 700; font-family: 'JetBrains Mono', monospace; margin-bottom: 4px; }
-        .stat-sub { font-size: 11px; color: var(--text-muted); }
-        .progress-bar { width: 100%; height: 4px; background: rgba(255,255,255,0.04); border-radius: 2px; overflow: hidden; margin-top: 8px; }
-        .progress-fill { height: 100%; background: var(--gradient-celadon); border-radius: 2px; transition: width 0.4s ease-out; position: relative; }
-        .progress-fill::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent); animation: shimmer 2s infinite; }
-        @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+        .stat-value { font-size: 20px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+        .stat-sub { font-size: 10px; color: var(--text-muted); }
+        .progress-bar { width: 100%; height: 4px; background: rgba(255,255,255,0.03); border-radius: 2px; overflow: hidden; margin-top: 6px; position: relative; }
+        .progress-fill { height: 100%; background: var(--gradient-celadon); border-radius: 2px; transition: width 0.4s ease; }
+        .progress-fill.fill-warn { background: linear-gradient(135deg, #F59E0B 0%, #EF4444 100%); }
+        .progress-fill.fill-danger { background: linear-gradient(135deg, #F43F5E 0%, #DC2626 100%); }
+        .vram-cap-marker {
+            position: absolute; top: -2px; width: 2px; height: 8px;
+            background: #F59E0B; border-radius: 1px; z-index: 2;
+            opacity: 0.8;
+        }
 
         /* ---- BUTTONS ---- */
         button {
-            padding: 8px 16px; border-radius: 8px;
+            padding: 6px 12px; border-radius: 6px;
             border: 1px solid var(--border);
             background: var(--bg-input);
             color: var(--text-primary);
-            font-family: inherit; font-size: 13px; font-weight: 600;
+            font-family: inherit; font-size: 12px; font-weight: 600;
             cursor: pointer; transition: all 0.2s;
         }
-        button:hover { border-color: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
+        button:hover { border-color: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
         button.btn-primary { background: var(--gradient); border: none; }
-        button.btn-primary:hover { opacity: 0.92; box-shadow: 0 4px 16px rgba(168,85,247,0.35); }
-        button.btn-danger { border-color: var(--danger); color: var(--danger); background: rgba(244,63,94,0.05); }
-        button.btn-danger:hover { background: var(--danger); color: #fff; box-shadow: 0 0 12px rgba(244,63,94,0.3); }
+        button.btn-danger { border-color: var(--danger); color: var(--danger); background: rgba(244,63,94,0.04); }
+        button.btn-danger:hover { background: var(--danger); color: #fff; }
         button.btn-cyan { background: var(--gradient-cyan); border: none; }
-        button.btn-cyan:hover { opacity: 0.9; box-shadow: 0 4px 16px rgba(34,211,238,0.3); }
-        button:disabled { opacity: 0.45; cursor: not-allowed; }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
 
         /* ---- INPUTS ---- */
         select, input[type="number"], input[type="text"], textarea {
-            padding: 8px 12px; border-radius: 8px;
+            padding: 6px 10px; border-radius: 6px;
             border: 1px solid var(--border);
             background: var(--bg-input); color: var(--text-primary);
-            font-family: inherit; font-size: 13px; outline: none;
-            transition: border-color 0.2s, box-shadow 0.2s;
+            font-family: inherit; font-size: 12px; outline: none;
+            transition: all 0.2s;
         }
         select:focus, input:focus, textarea:focus {
             border-color: var(--accent);
-            box-shadow: 0 0 0 3px var(--accent-glow);
+            box-shadow: 0 0 0 2px var(--accent-glow);
         }
-        textarea { resize: vertical; }
-        label { font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.6px; }
 
-        /* ---- APP ROWS ---- */
-        .app-row {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 13px 16px;
-            background: rgba(255,255,255,0.015);
-            border: 1px solid var(--border);
-            border-radius: 11px; margin-bottom: 9px;
-            transition: border-color 0.2s;
+        /* ---- PROMPT PRESET CHIPS ---- */
+        .preset-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 10px;
         }
-        .app-row:hover { border-color: rgba(168,85,247,0.2); }
-        .app-indicator { width: 9px; height: 9px; border-radius: 50%; background: var(--text-muted); transition: all 0.3s; }
-        .app-indicator.active { background: var(--success); box-shadow: 0 0 10px rgba(16,185,129,0.5); animation: pulse 2s infinite; }
-        @keyframes pulse { 0%,100% { box-shadow: 0 0 6px rgba(16,185,129,0.4); } 50% { box-shadow: 0 0 14px rgba(16,185,129,0.7); } }
-
-        /* ---- FILE EXPLORER ---- */
-        .explorer-layout { display: grid; grid-template-columns: 240px 1fr; gap: 18px; min-height: 500px; }
-        .explorer-sidebar { border-right: 1px solid var(--border); padding-right: 18px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
-        .shortcut-item {
-            padding: 9px 13px; background: rgba(255,255,255,0.01);
-            border: 1px solid var(--border); border-radius: 8px;
-            font-size: 12px; cursor: pointer;
-            transition: all 0.2s; display: flex; align-items: center; gap: 8px;
-        }
-        .shortcut-item:hover { border-color: var(--accent); background: rgba(168,85,247,0.06); }
-        .explorer-main { display: flex; flex-direction: column; gap: 14px; }
-        .explorer-toolbar {
-            display: flex; align-items: center; gap: 10px;
-            background: rgba(255,255,255,0.02);
-            border: 1px solid var(--border); border-radius: 9px; padding: 9px 14px;
-        }
-        .breadcrumbs { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-secondary); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .explorer-list { flex: 1; background: rgba(255,255,255,0.01); border: 1px solid var(--border); border-radius: 11px; max-height: 460px; overflow-y: auto; }
-        .file-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 14px; border-bottom: 1px solid rgba(255,255,255,0.015); font-size: 12px; transition: background 0.12s; }
-        .file-item:hover { background: rgba(255,255,255,0.025); }
-        .file-meta { display: flex; align-items: center; gap: 10px; flex: 1; cursor: pointer; }
-        .file-icon { font-size: 15px; min-width: 18px; }
-        .file-name { font-weight: 500; }
-        .file-size { color: var(--text-muted); font-size: 10px; font-family: 'JetBrains Mono', monospace; }
-
-        /* ---- LIGHTBOX ---- */
-        .lightbox-overlay {
-            position: fixed; inset: 0;
-            background: rgba(5,6,12,0.88); backdrop-filter: blur(10px);
-            z-index: 500; display: none; align-items: center; justify-content: center;
-        }
-        .lightbox-card {
-            background: var(--bg-secondary); border: 1px solid var(--border);
-            border-radius: 18px; max-width: 82vw; max-height: 82vh;
-            padding: 22px; display: flex; flex-direction: column; align-items: center; position: relative;
-        }
-        .lightbox-close { position: absolute; top: 14px; right: 14px; font-size: 20px; cursor: pointer; color: var(--text-muted); }
-        .lightbox-close:hover { color: #fff; }
-
-        /* ---- SEARCH ---- */
-        .search-bar-container { display: flex; gap: 10px; margin-bottom: 18px; }
-        .search-input { flex: 1; padding: 11px; font-size: 13px; }
-        table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        th { text-align: left; padding: 9px; color: var(--text-secondary); border-bottom: 1px solid var(--border); font-size: 11px; letter-spacing: 0.5px; }
-        td { padding: 9px; border-bottom: 1px solid rgba(255,255,255,0.015); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
-        tr:hover td { background: rgba(255,255,255,0.015); }
-
-        /* ---- DRIVES ---- */
-        .drives-grid { display: flex; flex-direction: column; gap: 12px; }
-        .drive-row { padding: 11px; border: 1px solid var(--border); border-radius: 9px; background: rgba(255,255,255,0.01); }
-
-        /* ---- LAUNCHERS ---- */
-        .launchers-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 14px; }
-        .launcher-card {
-            display: flex; flex-direction: column; justify-content: space-between;
-            background: rgba(168,85,247,0.04);
-            border: 1px solid rgba(168,85,247,0.14);
-            border-radius: 12px; padding: 16px;
-            transition: all 0.2s;
-        }
-        .launcher-card:hover { border-color: var(--accent); background: rgba(168,85,247,0.09); box-shadow: 0 0 14px var(--accent-glow); }
-        .launcher-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; word-break: break-all; }
-        .launcher-ext { font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--text-muted); text-transform: uppercase; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; align-self: flex-start; margin-bottom: 12px; }
-
-        /* ---- PROMPT GENERATOR ---- */
-        .prompt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
-        .preset-group { display: flex; flex-direction: column; gap: 10px; }
-        .preset-row { display: flex; flex-wrap: wrap; gap: 7px; }
         .preset-chip {
-            padding: 5px 12px; border-radius: 20px;
-            border: 1px solid var(--border); background: var(--bg-input);
-            font-size: 11px; font-weight: 600; cursor: pointer;
-            transition: all 0.18s; color: var(--text-secondary);
+            padding: 4px 10px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.02);
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
         }
-        .preset-chip:hover { border-color: var(--accent); color: var(--text-primary); }
-        .preset-chip.selected { background: var(--gradient); border-color: transparent; color: #fff; box-shadow: 0 0 10px var(--accent-glow); }
-        .prompt-output {
-            background: rgba(0,0,0,0.35); border: 1px solid var(--border);
-            border-radius: 11px; padding: 16px;
-            font-family: 'JetBrains Mono', monospace; font-size: 11px;
-            line-height: 1.7; color: var(--text-secondary);
-            min-height: 140px; white-space: pre-wrap;
-            overflow-y: auto; max-height: 220px;
+        .preset-chip:hover {
+            border-color: var(--accent);
+            color: #fff;
+            background: rgba(168, 85, 247, 0.05);
         }
-        .prompt-label { font-size: 10px; font-weight: 700; letter-spacing: 1px; margin-bottom: 5px; }
-        .prompt-label.pos { color: var(--success); }
-        .prompt-label.neg { color: var(--danger); }
-        .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.2); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .preset-chip.selected {
+            background: var(--gradient);
+            border-color: transparent;
+            color: #fff;
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
 
-        /* ---- TERMINALS ---- */
-        .terminal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(440px,1fr)); gap: 18px; }
+        /* ---- DYNAMIC TERMINALS MULTIPLEXING ---- */
+        .terminal-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            min-height: 400px;
+        }
         .terminal-window {
             background: #080A11;
-            border: 1px solid rgba(34,211,238,0.15);
-            border-radius: 13px; overflow: hidden;
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            border-radius: 12px;
+            resize: both;
+            overflow: auto;
+            min-width: 380px;
+            min-height: 250px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 450px;
         }
         .terminal-header {
             display: flex; align-items: center; justify-content: space-between;
-            padding: 10px 16px;
-            background: rgba(34,211,238,0.06);
-            border-bottom: 1px solid rgba(34,211,238,0.12);
+            padding: 8px 14px;
+            background: rgba(168, 85, 247, 0.04);
+            border-bottom: 1px solid rgba(168, 85, 247, 0.1);
         }
-        .terminal-title { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: var(--accent-cyan); }
-        .terminal-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 8px rgba(16,185,129,0.5); }
+        .terminal-title { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: var(--accent-hover); }
+        .terminal-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); box-shadow: 0 0 6px var(--success); }
         .terminal-body {
             font-family: 'JetBrains Mono', monospace; font-size: 11px;
-            color: #8FFFC8; line-height: 1.6;
-            padding: 14px; height: 300px; overflow-y: auto;
+            color: #8FFFC8; line-height: 1.5;
+            padding: 12px; height: 260px; overflow-y: auto;
             word-break: break-all;
+            background: #05060A;
         }
-        .terminal-line { opacity: 0; animation: lineIn 0.1s forwards; }
-        @keyframes lineIn { to { opacity: 1; } }
 
-        /* ---- SDC (Dataset Curator) ---- */
-        .sdc-grid { display: grid; grid-template-columns: 320px 1fr; gap: 20px; min-height: 520px; }
-        .sdc-panel { display: flex; flex-direction: column; gap: 14px; }
-        .image-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); gap: 10px; }
-        .gallery-thumb {
-            border-radius: 10px; overflow: hidden; cursor: pointer;
-            border: 2px solid var(--border); position: relative;
-            transition: all 0.2s;
+        /* Explorer items */
+        .explorer-layout { display: grid; grid-template-columns: 200px 1fr; gap: 14px; }
+        .explorer-sidebar { border-right: 1px solid var(--border); padding-right: 14px; display: flex; flex-direction: column; gap: 6px; }
+        .shortcut-item {
+            padding: 8px 12px; background: rgba(255,255,255,0.01);
+            border: 1px solid var(--border); border-radius: 6px;
+            font-size: 11px; cursor: pointer; transition: all 0.2s;
         }
-        .gallery-thumb:hover { border-color: var(--accent); box-shadow: 0 0 12px var(--accent-glow); }
-        .gallery-thumb.selected { border-color: var(--accent-cyan); box-shadow: 0 0 16px rgba(34,211,238,0.35); }
-        .gallery-thumb img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
-        .gallery-thumb .thumb-label { font-size: 9px; padding: 3px 6px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-        /* ---- BADGES / TAGS ---- */
-        .badge-tag {
-            display: inline-block; padding: 2px 8px; border-radius: 4px;
-            font-size: 10px; font-weight: 600; letter-spacing: 0.5px;
-        }
-        .badge-running { background: rgba(16,185,129,0.15); color: var(--success); border: 1px solid rgba(16,185,129,0.25); }
-        .badge-stopped { background: rgba(87,94,117,0.15); color: var(--text-muted); border: 1px solid rgba(87,94,117,0.25); }
-
-        /* Notification toast */
-        #toast {
-            position: fixed; bottom: 28px; right: 28px;
-            background: var(--bg-card); border: 1px solid var(--border);
-            border-radius: 11px; padding: 12px 20px;
-            font-size: 13px; z-index: 999;
-            display: none; backdrop-filter: blur(16px);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-            animation: slideUp 0.25s ease-out;
-        }
-        @keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .shortcut-item:hover { border-color: var(--accent); background: rgba(168,85,247,0.05); }
+        .explorer-list { background: rgba(255,255,255,0.01); border: 1px solid var(--border); border-radius: 8px; max-height: 420px; overflow-y: auto; }
+        .file-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.01); font-size: 11px; cursor: pointer; }
+        .file-item:hover { background: rgba(255,255,255,0.02); }
 
         .vram-panic-bar {
             display: flex; justify-content: space-between; align-items: center;
-            background: rgba(244,63,94,0.06);
-            border: 1px solid rgba(244,63,94,0.2);
-            border-radius: 12px; padding: 14px 18px; margin-bottom: 20px;
+            background: rgba(244,63,94,0.05);
+            border: 1px solid rgba(244,63,94,0.15);
+            border-radius: 10px; padding: 10px 16px; margin-bottom: 16px;
+        }
+
+        /* Launchers layout */
+        .launchers-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px,1fr)); gap: 12px; }
+        .launcher-card {
+            display: flex; flex-direction: column; justify-content: space-between;
+            background: rgba(168,85,247,0.03);
+            border: 1px solid rgba(168,85,247,0.1);
+            border-radius: 10px; padding: 14px;
+            transition: all 0.2s;
+        }
+        .launcher-card:hover { border-color: var(--accent); background: rgba(168,85,247,0.06); }
+        .launcher-title { font-size: 12px; font-weight: 600; margin-bottom: 4px; word-break: break-all; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        th { text-align: left; padding: 8px; color: var(--text-secondary); border-bottom: 1px solid var(--border); }
+        td { padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.01); font-family: 'JetBrains Mono', monospace; }
+
+        #toast {
+            position: fixed; bottom: 20px; right: 20px;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 8px; padding: 10px 18px;
+            font-size: 12px; z-index: 999; display: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
         }
     </style>
 </head>
@@ -414,340 +394,425 @@
             <span class="badge">SCC</span>
             <h1>Sanctuary Command Center</h1>
         </div>
-        <div id="vramBanner">VRAM Loading...</div>
-        <div class="header-time" id="headerClock">--:--:--</div>
+        <div style="display:flex; align-items:center; gap:12px;">
+            <div id="vramBanner">VRAM Loading...</div>
+            <button style="font-size:11px; padding:4px 10px; background:rgba(168,85,247,0.12); border:1px solid rgba(168,85,247,0.3); color:#d8b4fe;" onclick="openCmdPalette()">⌨️ <span style="font-family:'JetBrains Mono'; font-weight:700;">Ctrl+K</span></button>
+            <select id="themeSelector" style="font-size:11px; padding:3px 8px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1);" onchange="changeTheme(this.value)">
+                <option value="celadon">🟢 Celadon Emerald</option>
+                <option value="cyan">🩵 Cyberpunk Cyan</option>
+                <option value="purple">💜 Synthwave Purple</option>
+                <option value="crimson">🔴 Blood Crimson</option>
+            </select>
+            <div class="header-time" id="headerClock">--:--:--</div>
+        </div>
     </header>
 
     <!-- Navigation Tabs -->
     <div class="tabs-nav">
         <button class="tab-btn active" id="tab-system"   onclick="switchTab('system')">&#128187; System Monitor</button>
         <button class="tab-btn"        id="tab-ai"       onclick="switchTab('ai')">&#129504; AI Matrix</button>
-        <button class="tab-btn"        id="tab-prompt"   onclick="switchTab('prompt')">&#10024; Prompt Generator</button>
-        <button class="tab-btn"        id="tab-curator"  onclick="switchTab('curator')">&#128444; Dataset Curator</button>
         <button class="tab-btn"        id="tab-terminals"onclick="switchTab('terminals')">&#128187; Terminals</button>
         <button class="tab-btn"        id="tab-launchers"onclick="switchTab('launchers')">&#128640; Launchers</button>
-        <button class="tab-btn"        id="tab-explorer" onclick="switchTab('explorer')">&#128193; File Explorer</button>
-        <button class="tab-btn"        id="tab-search"   onclick="switchTab('search')">&#128269; Search</button>
+        <button class="tab-btn"        id="tab-vramcalc" onclick="switchTab('vramcalc')">&#129518; VRAM Calculator</button>
     </div>
 
-    <!-- ================================================================
-         TAB 1: SYSTEM MONITOR
-    ================================================================ -->
+    <!-- TAB 1: SYSTEM MONITOR v2.0 -->
     <div class="tab-content active" id="tabContent-system">
+
+        <!-- SANCTUARY EMERGENCY CONTROL BAR -->
+        <div class="emergency-bar">
+            <div>
+                <div style="font-size:12px; font-weight:700; color:var(--danger);">🚨 Sanctuary Emergency Controls</div>
+                <div style="font-size:10px; color:var(--text-muted); margin-top:2px;">Surgical process & VRAM recovery — Command Center stays online.</div>
+            </div>
+            <div class="emergency-actions">
+                <button class="btn-danger" style="background:rgba(168,85,247,0.12); border-color:rgba(168,85,247,0.35); color:#d8b4fe;" onclick="purgePython()">🐍 Purge Python</button>
+                <button class="btn-danger" onclick="executePanic()">🧹 Flush VRAM</button>
+                <button class="btn-danger" style="background:rgba(244,63,94,0.12);" onclick="executePanic()">💀 Nuke GPU</button>
+                <button style="background:rgba(45,212,191,0.1); border-color:rgba(45,212,191,0.25); color:#5eead4;" onclick="fetchStats()">🔄 Refresh</button>
+            </div>
+        </div>
+
+        <!-- STAT GAUGE CARDS WITH SPARKLINES -->
         <div class="grid-stats">
-            <div class="card-stat">
-                <div class="stat-header"><span>CPU Load</span><span id="cpuTemp">--</span></div>
+            <!-- CPU LOAD -->
+            <div class="card-stat" id="card-cpu">
+                <div class="stat-header"><span>CPU LOAD</span><span id="cpuTemp">--</span></div>
                 <div class="stat-value" id="cpuLoad">0%</div>
                 <div class="stat-sub">Processor workload</div>
                 <div class="progress-bar"><div class="progress-fill" id="cpuProgress" style="width:0%"></div></div>
+                <canvas class="sparkline-canvas" id="spark-cpu" width="240" height="32"></canvas>
             </div>
-            <div class="card-stat">
-                <div class="stat-header"><span>System RAM</span><span id="ramRaw">0 GB</span></div>
+
+            <!-- SYSTEM RAM -->
+            <div class="card-stat" id="card-ram">
+                <div class="stat-header"><span>SYSTEM RAM</span><span id="ramRaw" style="font-family:'JetBrains Mono';font-size:9px;">0 GB</span></div>
                 <div class="stat-value" id="ramPct">0%</div>
                 <div class="stat-sub">Memory allocation</div>
                 <div class="progress-bar"><div class="progress-fill" id="ramProgress" style="width:0%"></div></div>
+                <canvas class="sparkline-canvas" id="spark-ram" width="240" height="32"></canvas>
             </div>
-            <div class="card-stat">
-                <div class="stat-header"><span>GPU VRAM</span><span id="vramRaw">0 GB</span></div>
+
+            <!-- GPU VRAM -->
+            <div class="card-stat" id="card-vram">
+                <div class="stat-header"><span>GPU VRAM</span><span style="font-size:8px;color:var(--warning);">10.5 GB Cap</span></div>
                 <div class="stat-value" id="vramPct">0%</div>
-                <div class="stat-sub" id="gpuTemp">Temp: --C</div>
-                <div class="progress-bar"><div class="progress-fill" id="vramProgress" style="width:0%"></div></div>
+                <div class="stat-sub" id="gpuTempSub">Temp: --°F</div>
+                <div class="progress-bar" style="margin-top:6px; position:relative;">
+                    <div class="progress-fill" id="vramProgress" style="width:0%"></div>
+                    <div class="vram-cap-marker" style="left:87.5%;" title="10.5 GB Usable VRAM Cap"></div>
+                </div>
+                <div style="font-size:10px;color:var(--text-muted);margin-top:4px;" id="vramRaw">0 GB</div>
+                <canvas class="sparkline-canvas" id="spark-vram" width="240" height="32"></canvas>
             </div>
-            <div class="card-stat">
-                <div class="stat-header"><span>GPU Core Load</span><span>NVIDIA</span></div>
+
+            <!-- GPU CORE LOAD -->
+            <div class="card-stat" id="card-gpuload">
+                <div class="stat-header"><span>GPU CORE</span><span style="font-size:8px;">NVIDIA RTX 4070</span></div>
                 <div class="stat-value" id="gpuLoad">0%</div>
-                <div class="stat-sub">Graphics pipeline load</div>
+                <div class="stat-sub" id="gpuFanPower">Fan: --% | Power: --W</div>
                 <div class="progress-bar"><div class="progress-fill" id="gpuLoadProgress" style="width:0%"></div></div>
+                <canvas class="sparkline-canvas" id="spark-gpu" width="240" height="32"></canvas>
             </div>
         </div>
 
-        <div class="panel-grid-2">
-            <div class="panel">
-                <div class="panel-title"><span>Resource Hog Processes</span></div>
-                <div style="overflow-x:auto">
-                    <table>
-                        <thead><tr><th>PID</th><th>Name</th><th>CPU</th><th>RAM</th><th style="text-align:right">Control</th></tr></thead>
-                        <tbody id="processTableBody"><tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Scanning...</td></tr></tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="panel">
-                <div class="panel-title"><span>Drive Storage</span></div>
-                <div class="drives-grid" id="drivesContainer"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ================================================================
-         TAB 2: AI MATRIX
-    ================================================================ -->
-    <div class="tab-content" id="tabContent-ai">
-        <div class="vram-panic-bar">
-            <div>
-                <h4 style="color:var(--danger);font-size:14px;font-weight:700">VRAM Panic Release</h4>
-                <p style="font-size:11px;color:var(--text-secondary);margin-top:2px">Kills Ollama, Kobold, and WebUI Forge in one click.</p>
-            </div>
-            <button class="btn-danger" onclick="executePanic()">Nuke GPU Pipelines</button>
-        </div>
-
-        <div class="panel-grid-2">
-            <div class="panel">
-                <div class="panel-title"><span>AI Application Matrix</span></div>
-                <div id="appContainer"></div>
-            </div>
-            <div class="panel">
-                <div class="panel-title"><span>KoboldCPP Launcher</span></div>
-                <div style="display:flex;flex-direction:column;gap:14px">
-                    <div style="display:flex;flex-direction:column;gap:6px">
-                        <label>Select GGUF Model</label>
-                        <select id="ggufSelect"><option value="">-- Scanning models... --</option></select>
-                    </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                        <div style="display:flex;flex-direction:column;gap:6px">
-                            <label>GPU Layers</label>
-                            <input type="number" id="gpuLayers" value="35" min="0" max="200">
-                        </div>
-                        <div style="display:flex;flex-direction:column;gap:6px">
-                            <label>Context Size</label>
-                            <input type="number" id="contextSize" value="4096" step="1024">
-                        </div>
-                    </div>
-                    <button class="btn-primary" onclick="launchKobold()">Launch Selected Model</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ================================================================
-         TAB 3: PROMPT GENERATOR
-    ================================================================ -->
-    <div class="tab-content" id="tabContent-prompt">
-        <div class="prompt-grid">
-            <!-- LEFT: Controls -->
-            <div style="display:flex;flex-direction:column;gap:18px">
-                <div class="panel">
-                    <div class="panel-title"><span>Model &amp; Subject</span></div>
-                    <div style="display:flex;flex-direction:column;gap:12px">
-                        <div style="display:flex;flex-direction:column;gap:6px">
-                            <label>Ollama Model</label>
-                            <select id="ollamaModelSelect"><option value="">-- Loading models... --</option></select>
-                        </div>
-                        <div style="display:flex;flex-direction:column;gap:6px">
-                            <label>Subject / Scene Seed</label>
-                            <input type="text" id="promptSubject" placeholder="e.g. Amy, cyberpunk alley, intimate portrait...">
-                        </div>
-                        <div style="display:flex;flex-direction:column;gap:6px">
-                            <label>Extra Context (optional)</label>
-                            <textarea id="promptContext" rows="3" placeholder="mood, artistic direction, clothing, setting..."></textarea>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- DYNAMIC CATEGORIES — populated by loadPromptBank() -->
-                <div id="presetCategories"></div>
-
-                <!-- ACTION BUTTONS -->
-                <div style="display:flex;gap:10px;flex-wrap:wrap">
-                    <button class="btn-primary" id="randomizeAllBtn" onclick="randomizeAll()" style="flex:1;padding:11px;font-size:13px;background:var(--gradient)">
-                        &#x1F3B2; Randomize All
-                    </button>
-                    <button class="btn-primary" id="surpriseMeBtn" onclick="surpriseMe()" style="flex:1;padding:11px;font-size:13px;background:var(--gradient-cyan)">
-                        &#x2728; Surprise Me
-                    </button>
-                </div>
-
-                <button class="btn-primary" id="generateBtn" onclick="generatePrompt()" style="width:100%;padding:13px;font-size:14px">
-                    &#x26A1; Generate Prompt via Ollama
-                </button>
+        <!-- PROCESS TABLE WITH SEARCH & FILTERS -->
+        <div class="panel" style="margin-bottom:16px;">
+            <div class="panel-title">
+                <span>System Processes</span>
+                <span id="sysUptime" style="font-size:10px;color:var(--text-muted);font-weight:normal;font-family:'JetBrains Mono';">Uptime: --</span>
             </div>
 
-            <!-- RIGHT: Output -->
-            <div style="display:flex;flex-direction:column;gap:16px">
-                <div class="panel" style="flex:1">
-                    <div class="panel-title">
-                        <span>Generated Output</span>
-                        <div style="display:flex;gap:8px">
-                            <button onclick="copyPrompt('pos')" style="font-size:11px;padding:4px 10px">Copy Positive</button>
-                            <button onclick="copyPrompt('neg')" style="font-size:11px;padding:4px 10px">Copy Negative</button>
-                            <button onclick="copyPrompt('both')" style="font-size:11px;padding:4px 10px;background:var(--gradient);border:none">Copy Both</button>
-                        </div>
-                    </div>
-                    <div class="prompt-label pos">POSITIVE</div>
-                    <div class="prompt-output" id="promptPositive">Waiting for generation...</div>
-                    <br>
-                    <div class="prompt-label neg">NEGATIVE</div>
-                    <div class="prompt-output" id="promptNegative" style="min-height:80px">--</div>
-                </div>
-
-                <div class="panel">
-                    <div class="panel-title"><span>Assembled Prefix Tags</span></div>
-                    <div id="previewTags" class="prompt-output" style="min-height:60px;color:var(--accent-cyan)">-- select presets below --</div>
-                </div>
-
-                <div class="panel">
-                    <div class="panel-title"><span>Generation Log</span></div>
-                    <div id="promptLog" class="prompt-output" style="min-height:80px;color:var(--text-muted)">Idle.</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!--
-         TAB 4: DATASET CURATOR
-    ================================================================ -->
-    <div class="tab-content" id="tabContent-curator">
-        <div class="sdc-grid">
-            <!-- Controls Panel -->
-            <div class="sdc-panel">
-                <div class="panel">
-                    <div class="panel-title"><span>Scan Directory</span></div>
-                    <div style="display:flex;flex-direction:column;gap:10px">
-                        <div style="display:flex;flex-direction:column;gap:6px">
-                            <label>Source Path</label>
-                            <input type="text" id="sdcPath" value="D:\AI\Projects\ComfyUI\input\Amy_Master" style="width:100%">
-                        </div>
-                        <button class="btn-primary" onclick="sdcScan()">Scan for Images</button>
-                        <div id="sdcScanStatus" style="font-size:11px;color:var(--text-muted)">Ready.</div>
-                    </div>
-                </div>
-
-                <div class="panel">
-                    <div class="panel-title"><span>Selected Image</span></div>
-                    <div id="sdcSelectedPreview" style="text-align:center;padding:20px;color:var(--text-muted)">
-                        No image selected.
-                    </div>
-                </div>
-
-                <div class="panel">
-                    <div class="panel-title"><span>VLM Auto-Tag</span></div>
-                    <div style="display:flex;flex-direction:column;gap:10px">
-                        <div style="display:flex;flex-direction:column;gap:6px">
-                            <label>Vision Model</label>
-                            <select id="sdcVlmModel"><option value="">-- Loading... --</option></select>
-                        </div>
-                        <div style="display:flex;flex-direction:column;gap:6px">
-                            <label>Tag Instruction</label>
-                            <textarea id="sdcTagInstruction" rows="3">Describe this image in detailed Stable Diffusion tags. List visual elements, pose, clothing, lighting, style, separated by commas. Be explicit and precise.</textarea>
-                        </div>
-                        <button class="btn-cyan" onclick="sdcTagSelected()" id="sdcTagBtn">Tag Selected Image</button>
-                        <div id="sdcTagOutput" class="prompt-output" style="min-height:80px;color:var(--accent-cyan)">--</div>
-                    </div>
+            <!-- Search Bar + Filter Pills -->
+            <div style="display:flex; gap:10px; margin-bottom:12px; align-items:center; flex-wrap:wrap;">
+                <input type="text" id="procSearchInput" placeholder="🔍 Filter process by name..." style="flex:1; min-width:200px; font-family:'JetBrains Mono',monospace;" oninput="filterProcesses()">
+                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                    <button class="pill active" id="procFilter-all" onclick="setProcFilter('all', this)">All</button>
+                    <button class="pill" id="procFilter-python" onclick="setProcFilter('python', this)">🐍 Python / AI</button>
+                    <button class="pill" id="procFilter-high" onclick="setProcFilter('high', this)">⚠️ High Resource</button>
                 </div>
             </div>
 
-            <!-- Gallery Panel -->
-            <div class="sdc-panel">
-                <div class="panel" style="flex:1">
-                    <div class="panel-title">
-                        <span>Image Gallery</span>
-                        <span id="sdcImageCount" style="font-size:11px;color:var(--text-muted)">0 images</span>
-                    </div>
-                    <div class="image-gallery" id="sdcGallery">
-                        <div style="color:var(--text-muted);font-size:13px;grid-column:1/-1;text-align:center;padding:40px">Scan a directory to load images.</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ================================================================
-         TAB 5: TERMINALS
-    ================================================================ -->
-    <div class="tab-content" id="tabContent-terminals">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-            <h3 style="font-size:15px;font-weight:700">Live Process Terminals</h3>
-            <div style="display:flex;gap:10px">
-                <button onclick="clearAllLogs()">Clear All</button>
-                <button class="btn-cyan" onclick="pollTerminals()">Refresh Now</button>
-            </div>
-        </div>
-        <div class="terminal-grid" id="terminalGrid">
-            <!-- Rendered by JS -->
-        </div>
-    </div>
-
-    <!-- ================================================================
-         TAB 6: LAUNCHERS
-    ================================================================ -->
-    <div class="tab-content" id="tabContent-launchers">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-            <h3 style="font-size:15px;font-weight:700">AI Launchers Directory</h3>
-            <button onclick="openLaunchersFolder()">Open in Windows</button>
-        </div>
-        <div class="launchers-grid" id="launchersContainer">
-            <div style="color:var(--text-muted);grid-column:1/-1;text-align:center;padding:40px">Loading launchers...</div>
-        </div>
-    </div>
-
-    <!-- ================================================================
-         TAB 7: FILE EXPLORER
-    ================================================================ -->
-    <div class="tab-content" id="tabContent-explorer">
-        <div class="panel">
-            <div class="panel-title"><span>Sanctuary File Explorer</span></div>
-            <div class="explorer-layout">
-                <div class="explorer-sidebar" id="explorerShortcutsContainer"></div>
-                <div class="explorer-main">
-                    <div class="explorer-toolbar">
-                        <button onclick="navigateUp()" style="padding:6px 12px;font-size:12px">&uarr; Up</button>
-                        <div class="breadcrumbs" id="currentPathLabel">D:\\AI\\Projects</div>
-                        <button onclick="openCurrentDirInHost()" style="padding:6px 12px;font-size:12px">Show in Windows</button>
-                    </div>
-                    <div class="explorer-list" id="explorerList">
-                        <div style="text-align:center;padding:40px;color:var(--text-muted)">Initializing...</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ================================================================
-         TAB 8: SEARCH
-    ================================================================ -->
-    <div class="tab-content" id="tabContent-search">
-        <div class="panel">
-            <div class="panel-title"><span>Everything Search Indexer</span></div>
-            <div class="search-bar-container">
-                <input type="text" class="search-input" id="searchInput" placeholder="Search filenames: *.safetensors, Amy_Face, prompt..." onkeyup="checkSearchEnter(event)">
-                <button class="btn-primary" onclick="triggerSearch()">Execute Search</button>
-            </div>
-            <div style="overflow-x:auto;max-height:500px">
+            <div style="overflow-x:auto; max-height:320px; overflow-y:auto;">
                 <table>
-                    <thead><tr><th>File Name</th><th>Size (MB)</th><th>Path</th><th style="text-align:right">Control</th></tr></thead>
-                    <tbody id="searchResultsBody"><tr><td colspan="4" style="text-align:center;color:var(--text-muted)">Enter query above...</td></tr></tbody>
+                    <thead>
+                        <tr style="cursor:pointer;user-select:none;">
+                            <th onclick="sortProcesses('task_id')">Task # ⬍</th>
+                            <th onclick="sortProcesses('name')">Process Name ⬍</th>
+                            <th onclick="sortProcesses('pid')">PID ⬍</th>
+                            <th onclick="sortProcesses('cpu')">CPU % ⬍</th>
+                            <th onclick="sortProcesses('ram')">RAM ⬍</th>
+                            <th style="text-align:right">Control</th>
+                        </tr>
+                    </thead>
+                    <tbody id="processTableBody"><tr><td colspan="6" style="text-align:center;color:var(--text-muted)">Scanning...</td></tr></tbody>
                 </table>
             </div>
         </div>
-    </div>
 
-    <!-- Lightbox -->
-    <div class="lightbox-overlay" id="mediaLightbox" onclick="closeLightbox()">
-        <div class="lightbox-card" onclick="event.stopPropagation()">
-            <span class="lightbox-close" onclick="closeLightbox()">&times;</span>
-            <div id="lightboxContent" style="display:flex;flex-direction:column;align-items:center;gap:14px"></div>
+        <!-- DRIVE STORAGE CARDS -->
+        <div class="panel">
+            <div class="panel-title"><span>💾 Drive Storage</span></div>
+            <div class="drives-card-grid" id="drivesContainer"></div>
         </div>
     </div>
 
-    <!-- Toast -->
-    <div id="toast"></div>
+    <!-- TAB 2: AI MATRIX -->
+    <div class="tab-content" id="tabContent-ai">
+        <div class="vram-panic-bar">
+            <div>
+                <h4 style="color:var(--danger);font-size:13px;font-weight:700">VRAM & Process Emergency Release</h4>
+                <p style="font-size:10px;color:var(--text-secondary);margin-top:2px">Purge zombie Python workers or nuke GPU pipelines instantly.</p>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button class="btn-danger" style="background:rgba(168,85,247,0.15); border-color:rgba(168,85,247,0.35); color:#d8b4fe;" onclick="purgePython()">🐍 Purge Python Workers</button>
+                <button class="btn-danger" onclick="executePanic()">Nuke GPU Pipelines</button>
+            </div>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 16px; width: 100%;">
+            <!-- KOBOLDCPP CARD -->
+            <div class="panel" id="card-koboldcpp" style="flex: 1 1 340px; min-height: 310px; transition: all 0.3s ease;">
+                <div class="panel-title">
+                    <span>KoboldCPP Engine (Port 5001)</span>
+                    <span class="badge-tag badge-stopped" id="status-koboldcpp">OFFLINE</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:12px;height:calc(100% - 32px);justify-content:space-between;">
+                    <div style="display:flex;flex-direction:column;gap:10px">
+                        <div style="display:flex;flex-direction:column;gap:4px">
+                            <label>Select GGUF Model</label>
+                            <select id="ggufSelect" style="width:100%"><option value="">Loading GGUF list...</option></select>
+                        </div>
+                        <div style="display:flex;gap:10px">
+                            <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+                                <label>GPU Layers</label>
+                                <input type="number" id="gpuLayers" value="99" style="width:100%">
+                            </div>
+                            <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+                                <label>Context Size</label>
+                                <input type="number" id="contextSize" value="16384" style="width:100%">
+                            </div>
+                        </div>
+
+                        <!-- Active VRAM Optimization Badges -->
+                        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:4px;">
+                            <span style="font-size:10px; padding:3px 8px; border-radius:6px; background:rgba(45,212,191,0.12); color:#5eead4; border:1px solid rgba(45,212,191,0.3); font-weight:600;">⚡ FlashAttention-2</span>
+                            <span style="font-size:10px; padding:3px 8px; border-radius:6px; background:rgba(168,85,247,0.12); color:#d8b4fe; border:1px solid rgba(168,85,247,0.3); font-weight:600;">🔒 8-Bit KV (`q8_0`)</span>
+                            <span style="font-size:10px; padding:3px 8px; border-radius:6px; background:rgba(59,130,246,0.12); color:#93c5fd; border:1px solid rgba(59,130,246,0.3); font-weight:600;">🧠 SmartContext</span>
+                        </div>
+
+                        <!-- Active Loaded Model Container -->
+                        <div id="active-model-koboldcpp" style="display:none; font-size:11px; font-family:'JetBrains Mono'; background:rgba(0,0,0,0.3); padding:8px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.05); color:#a7f3d0;">
+                            Active: <span id="active-model-koboldcpp-name">--</span>
+                        </div>
+                    </div>
+
+                    <div id="btn-container-koboldcpp" style="margin-top:14px; display:flex; gap:8px;">
+                        <button class="btn-primary" onclick="launchKobold()" style="flex:1;">Launch KoboldCPP</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- OLLAMA CARD -->
+            <div class="panel" id="card-ollama" style="flex: 1 1 340px; min-height: 310px; transition: all 0.3s ease;">
+                <div class="panel-title">
+                    <span>Ollama Server (Port 11434)</span>
+                    <span class="badge-tag badge-stopped" id="status-ollama">OFFLINE</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:12px;height:calc(100% - 32px);justify-content:space-between;">
+                    <div style="display:flex;flex-direction:column;gap:10px">
+                        <div style="display:flex;flex-direction:column;gap:4px">
+                            <label>Default Inference Model</label>
+                            <select id="ollamaSelect" style="width:100%"><option value="">Checking Ollama models...</option></select>
+                        </div>
+                        <p style="font-size:10px;color:var(--text-muted);line-height:1.4">Ollama loads engines dynamically upon API query requests.</p>
+                        
+                        <!-- Active VRAM Optimization Badges for Ollama -->
+                        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:2px;">
+                            <span style="font-size:10px; padding:3px 8px; border-radius:6px; background:rgba(45,212,191,0.12); color:#5eead4; border:1px solid rgba(45,212,191,0.3); font-weight:600;">⚡ FA2 Enabled</span>
+                            <span style="font-size:10px; padding:3px 8px; border-radius:6px; background:rgba(168,85,247,0.12); color:#d8b4fe; border:1px solid rgba(168,85,247,0.3); font-weight:600;">🔒 `q8_0` KV Cache</span>
+                        </div>
+
+                        <!-- Active Loaded Model Container -->
+                        <div id="active-model-ollama" style="display:none; font-size:11px; font-family:'JetBrains Mono'; background:rgba(0,0,0,0.3); padding:8px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.05); color:#a7f3d0;">
+                            Loaded in VRAM: <span id="active-model-ollama-name">--</span>
+                        </div>
+                    </div>
+
+                    <div id="btn-container-ollama" style="margin-top:14px; display:flex; gap:8px;">
+                        <button class="btn-primary" onclick="launchApp('ollama')" style="flex:1;">Launch Ollama</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ULM MEMORY SEARCH CARD -->
+            <div class="panel" id="card-ulm-memory" style="flex: 1 1 340px; min-height: 310px; transition: all 0.3s ease;">
+                <div class="panel-title">
+                    <span>ULM Cognitive Memory Search</span>
+                    <span class="badge-tag" style="background:rgba(45,212,191,0.15); color:#5eead4; border:1px solid rgba(45,212,191,0.3);">v1.0.0</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:10px;height:calc(100% - 32px);justify-content:space-between;">
+                    <div style="display:flex;flex-direction:column;gap:8px">
+                        <p style="font-size:11px;color:var(--text-secondary);line-height:1.4">Directly search SQLite vector memory database (`sync_state.db`) across 12,000+ metrics and facts.</p>
+                        <div style="display:flex; gap:6px;">
+                            <input type="text" id="ulmSearchQuery" placeholder="Enter search (e.g. Ollama, RTX 4070)..." style="flex:1; font-family:'JetBrains Mono',monospace; font-size:11px;" onkeydown="if(event.key==='Enter') executeUlmSearch()">
+                            <button class="btn-cyan" style="font-size:11px; padding:4px 10px;" onclick="executeUlmSearch()">🔍 Search</button>
+                        </div>
+                        <div id="ulmSearchResults" style="overflow-y:auto; max-height:150px; font-size:10px; font-family:'JetBrains Mono',monospace; background:rgba(0,0,0,0.3); padding:8px; border-radius:6px; border:1px solid rgba(255,255,255,0.05); color:var(--text-secondary);">
+                            <div style="color:var(--text-muted);">Enter query above to search past session logs & facts...</div>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:6px;">
+                        <button class="pill" style="flex:1; text-align:center;" onclick="window.open('http://127.0.0.1:8890', '_blank')">🌐 Open ULM WebUI (8890)</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 4: TERMINALS -->
+    <div class="tab-content" id="tabContent-terminals">
+        <!-- Interactive Terminal Command Bar -->
+        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:16px; backdrop-filter:blur(12px);">
+            <div style="font-size:12px; font-weight:700; color:var(--text-primary); margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
+                <span>⚡ Interactive PowerShell Command Runner</span>
+                <span style="font-size:10px; color:var(--text-muted); font-weight:normal;">Executes directly in D:\AI\Projects\command_center</span>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <input type="text" id="termCmdInput" style="flex:1; font-family:'JetBrains Mono', monospace;" placeholder="Enter command (e.g. nvidia-smi, Get-Process python, ollama list)..." onkeydown="if(event.key==='Enter') sendTerminalCommand()">
+                <button class="btn-cyan" onclick="sendTerminalCommand()">▶ Run Command</button>
+            </div>
+        </div>
+
+        <div class="panel-title">
+            <span>Multiplexed Terminals (Drag corners to scale)</span>
+            <div style="display:flex; gap:8px; align-items:center;">
+                <!-- Filter Pills -->
+                <button id="pill-scroll-toggle" style="background:rgba(45,212,191,0.15); border-color:rgba(45,212,191,0.35); color:#5eead4;" onclick="toggleAutoScroll()">📌 Auto-Scroll: ON</button>
+                <button class="btn-danger" onclick="clearAllLogs()">Clear All Outputs</button>
+            </div>
+        </div>
+
+        <!-- Terminal Category Filters -->
+        <div style="display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;">
+            <button class="pill active" id="termFilter-all" onclick="setTerminalFilter('all', this)">All Logs</button>
+            <button class="pill" id="termFilter-error" onclick="setTerminalFilter('error', this)">⚠️ Errors Only</button>
+            <button class="pill" id="termFilter-koboldcpp" onclick="setTerminalFilter('koboldcpp', this)">KoboldCPP</button>
+            <button class="pill" id="termFilter-ollama" onclick="setTerminalFilter('ollama', this)">Ollama</button>
+            <button class="pill" id="termFilter-powershell" onclick="setTerminalFilter('powershell', this)">PowerShell</button>
+        </div>
+
+        <div class="terminal-grid" id="terminalGrid">
+            <!-- Dynamic windows mount here -->
+        </div>
+    </div>
+
+    <!-- TAB 5: LAUNCHERS v2.0 -->
+    <div class="tab-content" id="tabContent-launchers">
+        <div class="panel" style="margin-bottom:16px;">
+            <div class="panel-title">
+                <span>🚀 Workstation Service Launchpad</span>
+                <button style="background:rgba(45,212,191,0.1); border-color:rgba(45,212,191,0.25); color:#5eead4;" onclick="openLaunchersFolder()">📂 Open D:\AI\Launchers</button>
+            </div>
+
+            <!-- Search Bar + Category Filters -->
+            <div style="display:flex; gap:10px; margin-bottom:14px; align-items:center; flex-wrap:wrap;">
+                <input type="text" id="launcherSearchInput" placeholder="🔍 Search workstation launcher..." style="flex:1; min-width:220px; font-family:'JetBrains Mono',monospace;" oninput="renderLaunchersGrid()">
+                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                    <button class="pill active" id="launcherFilter-all" onclick="setLauncherFilter('all', this)">All Apps</button>
+                    <button class="pill" id="launcherFilter-img" onclick="setLauncherFilter('img', this)">🎨 Image Gen</button>
+                    <button class="pill" id="launcherFilter-llm" onclick="setLauncherFilter('llm', this)">🧠 LLMs & Persona</button>
+                    <button class="pill" id="launcherFilter-voice" onclick="setLauncherFilter('voice', this)">🗣️ Voice & Memory</button>
+                    <button class="pill" id="launcherFilter-tools" onclick="setLauncherFilter('tools', this)">🛠️ Tools & Curation</button>
+                </div>
+            </div>
+
+            <!-- Master Workstation Launcher Cards Grid -->
+            <div id="launchersContainer" style="display:flex; flex-direction:column; gap:14px;">
+                <div style="text-align:center; color:var(--text-muted); padding:30px;">Scanning workstation services...</div>
+            </div>
+        </div>
+    <!-- TAB 5: VRAM BUDGET CALCULATOR -->
+    <div class="tab-content" id="tabContent-vramcalc">
+        <div class="panel" style="margin-bottom:16px;">
+            <div class="panel-title">
+                <span>🧮 Interactive VRAM & Model Budget Calculator</span>
+                <span style="font-size:10px; color:var(--accent-celadon); font-family:'JetBrains Mono'; font-weight:700;">NVIDIA RTX 4070 (12 GB VRAM / 10.5 GB Usable Cap)</span>
+            </div>
+
+            <!-- Preset Model Buttons -->
+            <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; align-items:center;">
+                <span style="font-size:11px; font-weight:700; color:var(--text-secondary);">One-Click Presets:</span>
+                <button class="pill" onclick="applyVramPreset('qwen14b')">💻 Qwen 2.5 Coder 14B (Q4_K_M)</button>
+                <button class="pill" onclick="applyVramPreset('nemo12b')">🧠 Mistral NeMo 12B (Q5_K_M)</button>
+                <button class="pill" onclick="applyVramPreset('llama8b')">⚡ Llama 3.1 8B (Q8_0)</button>
+                <button class="pill" onclick="applyVramPreset('deepseek16b')">🚀 DeepSeek Lite 16B (Q4_K_M)</button>
+            </div>
+
+            <div class="panel-grid-equal" style="margin-bottom:16px;">
+                <!-- Model Configuration Controls -->
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    <div>
+                        <label style="font-size:11px; font-weight:700; color:var(--text-secondary);">Model Parameter Size (Billion Parameters)</label>
+                        <div style="display:flex; align-items:center; gap:10px; margin-top:4px;">
+                            <input type="range" id="calcParams" min="3" max="34" step="1" value="14" style="flex:1;" oninput="recalcVramBudget()">
+                            <span id="calcParamsLabel" style="font-family:'JetBrains Mono'; font-size:13px; font-weight:700; color:var(--accent-celadon); width:50px; text-align:right;">14B</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style="font-size:11px; font-weight:700; color:var(--text-secondary);">Weight Quantization Precision</label>
+                        <select id="calcQuant" style="width:100%; margin-top:4px;" onchange="recalcVramBudget()">
+                            <option value="4.0">Q4_K_M / EXL2 4.0bpw (4-bit - Recommended)</option>
+                            <option value="5.0">Q5_K_M / EXL2 5.0bpw (5-bit - Higher Quality)</option>
+                            <option value="8.0">Q8_0 / FP8 (8-bit - High Precision)</option>
+                            <option value="16.0">FP16 / Unquantized (16-bit)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="font-size:11px; font-weight:700; color:var(--text-secondary);">Context Window Length (Tokens)</label>
+                        <div style="display:flex; align-items:center; gap:10px; margin-top:4px;">
+                            <input type="range" id="calcContext" min="4096" max="32768" step="2048" value="16384" style="flex:1;" oninput="recalcVramBudget()">
+                            <span id="calcContextLabel" style="font-family:'JetBrains Mono'; font-size:13px; font-weight:700; color:#d8b4fe; width:70px; text-align:right;">16,384</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style="font-size:11px; font-weight:700; color:var(--text-secondary);">KV Cache Precision</label>
+                        <select id="calcKvPrecision" style="width:100%; margin-top:4px;" onchange="recalcVramBudget()">
+                            <option value="1.0">q8_0 (8-Bit Quantized KV - Recommended)</option>
+                            <option value="0.5">q4_0 (4-Bit Quantized KV - Ultra Low VRAM)</option>
+                            <option value="2.0">FP16 (Unquantized Standard KV)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Visual VRAM Breakdown Output -->
+                <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:12px; padding:16px; display:flex; flex-direction:column; justify-content:space-between;">
+                    <div>
+                        <div style="font-size:12px; font-weight:700; color:var(--text-primary); margin-bottom:10px;">Predicted VRAM Consumption</div>
+                        
+                        <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:11px;">
+                            <span style="color:var(--text-secondary);">Model Weights:</span>
+                            <span id="calcWeightsMb" style="font-family:'JetBrains Mono'; font-weight:700; color:var(--accent-celadon);">0 MB</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:11px;">
+                            <span style="color:var(--text-secondary);">KV Cache Overhead:</span>
+                            <span id="calcKvMb" style="font-family:'JetBrains Mono'; font-weight:700; color:#d8b4fe;">0 MB</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:11px;">
+                            <span style="color:var(--text-secondary);">CUDA Context Overhead:</span>
+                            <span style="font-family:'JetBrains Mono'; font-weight:700; color:var(--text-muted);">~550 MB</span>
+                        </div>
+
+                        <div style="border-top:1px solid rgba(255,255,255,0.06); padding-top:8px; display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:13px; font-weight:700; color:#fff;">Total VRAM Required:</span>
+                            <span id="calcTotalGb" style="font-family:'JetBrains Mono'; font-size:22px; font-weight:800; color:var(--accent-celadon);">0.0 GB</span>
+                        </div>
+                    </div>
+
+                    <!-- Visual Stacked VRAM Bar -->
+                    <div style="margin-top:14px;">
+                        <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-muted); margin-bottom:4px;">
+                            <span>0 GB</span>
+                            <span>10.5 GB Usable Cap</span>
+                            <span>12 GB Max</span>
+                        </div>
+                        <div class="progress-bar" style="height:14px; border-radius:6px; position:relative; overflow:visible; background:rgba(0,0,0,0.5);">
+                            <div id="calcBarFill" style="height:100%; border-radius:6px; transition:width 0.3s ease; background:var(--gradient-celadon);"></div>
+                            <div style="position:absolute; top:-3px; left:87.5%; width:2px; height:20px; background:#F59E0B; z-index:3;" title="10.5 GB Usable Limit"></div>
+                        </div>
+                        <div id="calcStatusVerdict" style="margin-top:8px; font-size:11px; font-weight:700; text-align:center; color:var(--success);">
+                            ✅ Optimal Allocation: Fits comfortably within RTX 4070 VRAM budget.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GLOBAL COMMAND PALETTE MODAL (Ctrl + K) -->
+    <div id="cmdPaletteModal" class="modal-backdrop hidden" onclick="if(event.target===this) closeCmdPalette()">
+        <div style="width:100%; max-width:560px; background:rgba(10,12,20,0.95); border:1px solid rgba(168,85,247,0.3); border-radius:14px; padding:16px; backdrop-filter:blur(24px); box-shadow:0 0 40px rgba(0,0,0,0.8); margin:auto;">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:10px;">
+                <span style="font-size:16px;">🔍</span>
+                <input type="text" id="cmdPaletteInput" placeholder="Type command or search action (e.g., Purge Python, Launch Kobold, VRAM)..." style="flex:1; font-family:'JetBrains Mono',monospace; font-size:13px; background:transparent; border:none; color:#fff;" oninput="filterCmdPalette()" onkeydown="handleCmdPaletteKey(event)">
+                <span style="font-size:10px; color:var(--text-muted); font-family:'JetBrains Mono';">ESC to exit</span>
+            </div>
+            <div id="cmdPaletteResults" style="max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:4px;">
+                <!-- Fuzzy matched actions mount here -->
+            </div>
+        </div>
+    </div>
+
+    <div id="toast">Ready</div>
 
     <script>
-        // ============================================================
-        //  GLOBAL STATE
-        // ============================================================
-        let currentExplorerPath = "{{ explorer_initial_path }}";
-        let sdcSelectedFile = null;
-        let terminalPollInterval = null;
+        let currentExplorerPath = "D:\\AI\\Projects";
+        let promptBank = {};
+        let selectedPresets = {};
 
-        // Clock
-        function updateClock() {
-            const now = new Date();
-            document.getElementById('headerClock').textContent = now.toLocaleTimeString('en-US', {hour12: false});
-        }
-        setInterval(updateClock, 1000);
-        updateClock();
-
-        // Toast helper
         function showToast(msg, color) {
             const t = document.getElementById('toast');
             t.textContent = msg;
@@ -756,9 +821,6 @@
             setTimeout(() => { t.style.display = 'none'; }, 2800);
         }
 
-        // ============================================================
-        //  TAB SWITCHING
-        // ============================================================
         function switchTab(tabId) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -769,102 +831,329 @@
             if (tabId === 'explorer') loadDirectory(currentExplorerPath);
             if (tabId === 'launchers') loadLaunchers();
             if (tabId === 'terminals') pollTerminals();
-            if (tabId === 'prompt') { fetchOllamaModels(); loadPromptBank(); }
-            if (tabId === 'curator') { fetchOllamaModels(); populateSdcVlmModels(); }
         }
 
-        // ============================================================
-        //  STATS POLLING
-        // ============================================================
+        // ---- SPARKLINE ENGINE (Zero-dependency Canvas Ring Buffer) ----
+        class Sparkline {
+            constructor(canvasId, maxPoints = 50, color = '#2DD4BF') {
+                this.canvas = document.getElementById(canvasId);
+                if (!this.canvas) return;
+                this.ctx = this.canvas.getContext('2d');
+                this.maxPoints = maxPoints;
+                this.data = new Float32Array(maxPoints);
+                this.head = 0;
+                this.count = 0;
+                this.color = color;
+            }
+            push(val) {
+                if (!this.ctx) return;
+                this.data[this.head] = val;
+                this.head = (this.head + 1) % this.maxPoints;
+                if (this.count < this.maxPoints) this.count++;
+                this.draw();
+            }
+            draw() {
+                const { width, height } = this.canvas;
+                this.ctx.clearRect(0, 0, width, height);
+                if (this.count < 2) return;
+                this.ctx.beginPath();
+                this.ctx.strokeStyle = this.color;
+                this.ctx.lineWidth = 1.5;
+                this.ctx.lineJoin = 'round';
+                for (let i = 0; i < this.count; i++) {
+                    const idx = (this.head - this.count + i + this.maxPoints) % this.maxPoints;
+                    const x = (i / (this.maxPoints - 1)) * width;
+                    const y = height - (this.data[idx] / 100) * (height - 2) - 1;
+                    if (i === 0) this.ctx.moveTo(x, y);
+                    else this.ctx.lineTo(x, y);
+                }
+                this.ctx.stroke();
+            }
+        }
+
+        const sparkCPU  = new Sparkline('spark-cpu',  50, '#2DD4BF');
+        const sparkRAM  = new Sparkline('spark-ram',  50, '#A855F7');
+        const sparkVRAM = new Sparkline('spark-vram', 50, '#22D3EE');
+        const sparkGPU  = new Sparkline('spark-gpu',  50, '#EC4899');
+
+        function getThresholdColor(pct) {
+            if (pct >= 90) return 'danger';
+            if (pct >= 75) return 'warn';
+            return '';
+        }
+
+        function applyThreshold(cardId, progressId, pct) {
+            const card = document.getElementById(cardId);
+            const fill = document.getElementById(progressId);
+            if (!card || !fill) return;
+            card.classList.remove('threshold-warn', 'threshold-danger');
+            fill.classList.remove('fill-warn', 'fill-danger');
+            const level = getThresholdColor(pct);
+            if (level === 'danger') {
+                card.classList.add('threshold-danger');
+                fill.classList.add('fill-danger');
+            } else if (level === 'warn') {
+                card.classList.add('threshold-warn');
+                fill.classList.add('fill-warn');
+            }
+        }
+
+        let activeProcFilter = 'all';
+
+        function setProcFilter(filter, el) {
+            activeProcFilter = filter;
+            document.querySelectorAll('#tabContent-system .pill').forEach(p => {
+                if (p.id.startsWith('procFilter-')) p.classList.remove('active');
+            });
+            el.classList.add('active');
+            renderProcessesTable();
+        }
+
+        function filterProcesses() {
+            renderProcessesTable();
+        }
+
+        // WebSocket Real-time Telemetry
+        const socket = io();
+        socket.on('telemetry', function(data) {
+            updateTelemetry(data);
+        });
+
+        function updateTelemetry(d) {
+            if (!d) return;
+            // System & GPU Telemetry
+            try {
+                if (d.system) {
+                    const cpu = d.system.cpu_load;
+                    const ramPct = d.system.ram_pct;
+
+                    document.getElementById('cpuLoad').textContent    = cpu + '%';
+                    document.getElementById('cpuProgress').style.width = cpu + '%';
+                    document.getElementById('ramPct').textContent     = ramPct + '%';
+                    document.getElementById('ramProgress').style.width = ramPct + '%';
+                    document.getElementById('ramRaw').textContent     = d.system.ram_used_gb + ' / ' + d.system.ram_total_gb + ' GB';
+
+                    sparkCPU.push(cpu);
+                    sparkRAM.push(ramPct);
+                    applyThreshold('card-cpu', 'cpuProgress', cpu);
+                    applyThreshold('card-ram', 'ramProgress', ramPct);
+
+                    // Uptime
+                    if (d.system.uptime) {
+                        const el = document.getElementById('sysUptime');
+                        if (el) el.textContent = 'Uptime: ' + d.system.uptime;
+                    }
+                }
+
+                if (d.gpu) {
+                    const vp = d.gpu.pct || 0;
+                    const gpuErr = d.gpu.error;
+                    if (gpuErr) {
+                        document.getElementById("vramPct").textContent = "ERR";
+                        document.getElementById("vramProgress").style.width = "0%";
+                        document.getElementById("vramRaw").textContent = gpuErr;
+                        const tEl = document.getElementById("gpuTempSub") || document.getElementById("gpuTemp");
+                        if (tEl) tEl.textContent = "Temp: N/A";
+                        document.getElementById("gpuLoad").textContent = "ERR";
+                        document.getElementById("gpuLoadProgress").style.width = "0%";
+                        document.getElementById("vramBanner").textContent = "GPU: " + gpuErr;
+                    } else {
+                        document.getElementById('vramPct').textContent     = vp + '%';
+                        document.getElementById('vramProgress').style.width = vp + '%';
+                        document.getElementById('vramRaw').textContent     = (d.gpu.vram_used/1024).toFixed(1) + ' / ' + (d.gpu.vram_total/1024).toFixed(1) + ' GB';
+                        const fTemp = ((d.gpu.temp * 9 / 5) + 32).toFixed(0);
+                        const tEl = document.getElementById("gpuTempSub") || document.getElementById("gpuTemp");
+                        if (tEl) tEl.textContent     = 'Temp: ' + fTemp + '°F (' + d.gpu.temp + '°C)';
+                        document.getElementById('gpuLoad').textContent     = d.gpu.load + '%';
+                        document.getElementById('gpuLoadProgress').style.width = d.gpu.load + '%';
+                        document.getElementById('vramBanner').textContent  = 'VRAM: ' + (d.gpu.vram_used/1024).toFixed(1) + ' / ' + (d.gpu.vram_total/1024).toFixed(1) + ' GB (' + vp + '%)';
+
+                        sparkVRAM.push(vp);
+                        sparkGPU.push(d.gpu.load);
+                        applyThreshold('card-vram', 'vramProgress', vp);
+                        applyThreshold('card-gpuload', 'gpuLoadProgress', d.gpu.load);
+
+                        // Fan speed & power draw
+                        const fanEl = document.getElementById('gpuFanPower');
+                        if (fanEl) {
+                            const fan = d.gpu.fan !== undefined ? d.gpu.fan + '%' : '--%';
+                            const pwr = d.gpu.power_w !== undefined ? d.gpu.power_w + 'W' : '--W';
+                            fanEl.textContent = 'Fan: ' + fan + ' | Power: ' + pwr;
+                        }
+                    }
+                }
+            } catch(errSys) { console.error('[updateTelemetry system]', errSys); }
+
+            // App Launcher Cards
+            try {
+                if (d.apps) {
+                    for (const [key, app] of Object.entries(d.apps)) {
+                        const card = document.getElementById('card-' + key);
+                        const statusTag = document.getElementById('status-' + key);
+                        const btnContainer = document.getElementById('btn-container-' + key);
+                        const activeModelBox = document.getElementById('active-model-' + key);
+                        const activeModelName = document.getElementById('active-model-' + key + '-name');
+
+                        if (card && statusTag && btnContainer) {
+                            if (app.running) {
+                                card.classList.add('live-glow-' + key);
+                                statusTag.className = 'badge-tag badge-running';
+                                statusTag.textContent = 'ONLINE';
+
+                                if (activeModelBox && activeModelName && app.active_model) {
+                                    activeModelBox.style.display = 'block';
+                                    activeModelName.textContent = app.active_model;
+                                }
+
+                                if (key === 'koboldcpp') {
+                                    btnContainer.innerHTML = `
+                                        <button class="btn-cyan" style="flex:1;" onclick="window.open('http://127.0.0.1:5001', '_blank')">🌐 Open WebUI</button>
+                                        <button class="btn-danger" style="flex:1;" onclick="killApp('koboldcpp')">Stop Kobold</button>`;
+                                } else if (key === 'ollama') {
+                                    btnContainer.innerHTML = `
+                                        <button style="flex:1; background:rgba(45,212,191,0.15); border:1px solid rgba(45,212,191,0.35); color:#5eead4; font-weight:600;" onclick="unloadVram('ollama')">🧹 Unload VRAM</button>
+                                        <button class="btn-danger" style="flex:1;" onclick="killApp('ollama')">Stop Ollama</button>`;
+                                } else {
+                                    btnContainer.innerHTML = `<button class="btn-danger" style="width:100%" onclick="killApp('${key}')">Kill ${app.name}</button>`;
+                                }
+
+                                if (key === 'ollama') {
+                                    const sel = document.getElementById('ollamaSelect');
+                                    if (sel && (sel.innerHTML.includes('Offline') || sel.innerHTML.includes('Checking') || sel.innerHTML === '')) {
+                                        fetchOllamaModels();
+                                    }
+                                }
+                            } else {
+                                card.classList.remove('live-glow-' + key);
+                                statusTag.className = 'badge-tag badge-stopped';
+                                statusTag.textContent = 'OFFLINE';
+                                if (activeModelBox) activeModelBox.style.display = 'none';
+
+                                if (key === 'koboldcpp') {
+                                    btnContainer.innerHTML = `<button class="btn-primary" style="width:100%" onclick="launchKobold()">Launch KoboldCPP</button>`;
+                                } else {
+                                    btnContainer.innerHTML = `<button class="btn-primary" style="width:100%" onclick="launchApp('${key}')">Launch ${app.name}</button>`;
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch(errApps) { console.error('[updateTelemetry apps]', errApps); }
+
+            // Drive Storage Cards (visual upgrade)
+            try {
+                const dc = document.getElementById('drivesContainer');
+                if (dc && d.drives) {
+                    dc.innerHTML = '';
+                    const driveLabels = { 'C:': 'System', 'D:': 'NVMe SSD', 'E:': 'Cold Archive', 'G:': 'Storage' };
+                    d.drives.forEach(drive => {
+                        const card = document.createElement('div');
+                        const freeGb = (drive.total_gb - drive.used_gb).toFixed(1);
+                        const danger = drive.pct > 90;
+                        const warn = drive.pct > 80;
+                        card.className = 'drive-card' + (danger ? ' drive-danger' : warn ? ' drive-warn' : '');
+                        const label = driveLabels[drive.letter] || 'Drive';
+                        card.innerHTML = `
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                                <div>
+                                    <div style="font-size:13px;font-weight:700;color:var(--text-primary);">💾 ${drive.letter}</div>
+                                    <div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">${label}</div>
+                                </div>
+                                <div style="font-family:'JetBrains Mono';font-size:11px;color:${danger ? 'var(--danger)' : warn ? 'var(--warning)' : 'var(--accent-celadon)'};font-weight:600;">${drive.pct}%</div>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill${danger ? ' fill-danger' : warn ? ' fill-warn' : ''}" style="width:${drive.pct}%"></div></div>
+                            <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:10px;color:var(--text-muted);font-family:'JetBrains Mono';">
+                                <span>${drive.used_gb} / ${drive.total_gb} GB</span>
+                                <span style="color:${danger ? 'var(--danger)' : 'var(--accent-celadon)'}">${freeGb} GB Free</span>
+                            </div>`;
+                        dc.appendChild(card);
+                    });
+                }
+            } catch(errDrives) { console.error('[updateTelemetry drives]', errDrives); }
+
+            // System Processes Table
+            try {
+                if (d.processes) {
+                    window.latestProcessesData = d.processes;
+                    renderProcessesTable();
+                }
+            } catch(errProc) { console.error('[updateTelemetry proc]', errProc); }
+        }
+
         async function fetchStats() {
             try {
                 const res = await fetch('/api/stats');
                 const d = await res.json();
-                document.getElementById('cpuLoad').textContent    = d.system.cpu_load + '%';
-                document.getElementById('cpuProgress').style.width = d.system.cpu_load + '%';
-                document.getElementById('ramPct').textContent     = d.system.ram_pct + '%';
-                document.getElementById('ramProgress').style.width = d.system.ram_pct + '%';
-                document.getElementById('ramRaw').textContent     = d.system.ram_used_gb + ' / ' + d.system.ram_total_gb + ' GB';
-
-                const vp = d.gpu.pct || 0;
-const gpuErr = d.gpu.error;
-                if (gpuErr) {
-document.getElementById("vramPct").textContent = "ERR";
-document.getElementById("vramProgress").style.width = "0%";
-document.getElementById("vramRaw").textContent = gpuErr;
-                document.getElementById("gpuTemp").textContent = "Temp: N/A";
-                document.getElementById("gpuLoad").textContent = "ERR";
-                document.getElementById("gpuLoadProgress").style.width = "0%";
-                document.getElementById("vramBanner").textContent = "GPU: " + gpuErr;
-                } else {
-                document.getElementById('vramPct').textContent     = vp + '%';
-                document.getElementById('vramProgress').style.width = vp + '%';
-                document.getElementById('vramRaw').textContent     = (d.gpu.vram_used/1024).toFixed(1) + ' / ' + (d.gpu.vram_total/1024).toFixed(1) + ' GB';
-                document.getElementById('gpuTemp').textContent     = 'Temp: ' + d.gpu.temp + 'C';
-                document.getElementById('gpuLoad').textContent     = d.gpu.load + '%';
-                document.getElementById('gpuLoadProgress').style.width = d.gpu.load + '%';
-                document.getElementById('vramBanner').textContent  = 'VRAM: ' + (d.gpu.vram_used/1024).toFixed(1) + ' / ' + (d.gpu.vram_total/1024).toFixed(1) + ' GB (' + vp + '%)';
-} // end gpu error check
-
-                // Apps
-                const ac = document.getElementById('appContainer');
-                ac.innerHTML = '';
-                for (const [key, app] of Object.entries(d.apps)) {
-                    const row = document.createElement('div');
-                    row.className = 'app-row';
-                    row.innerHTML = '<div style="display:flex;align-items:center;gap:12px">' +
-                        '<div class="app-indicator ' + (app.running ? 'active' : '') + '"></div>' +
-                        '<div>' +
-                            '<div style="font-size:13px;font-weight:600">' + app.name + '</div>' +
-                            '<div style="font-size:10px;color:var(--text-muted);margin-top:2px">Port ' + app.port + '</div>' +
-                        '</div></div>' +
-                        '<div style="display:flex;align-items:center;gap:8px">' +
-                            '<span class="badge-tag ' + (app.running ? 'badge-running' : 'badge-stopped') + '">' + (app.running ? 'ONLINE' : 'OFFLINE') + '</span>' +
-                            (app.running ?
-                                '<button class="btn-danger" style="font-size:11px;padding:4px 10px" onclick="killApp(\'' + key + '\')">Kill</button>' :
-                                '<button style="font-size:11px;padding:4px 10px" onclick="launchApp(\'' + key + '\')">Launch</button>') +
-                        '</div>';
-                    ac.appendChild(row);
-                }
-
-                // Drives
-                const dc = document.getElementById('drivesContainer');
-                dc.innerHTML = '';
-                d.drives.forEach(drive => {
-                    const row = document.createElement('div');
-                    row.className = 'drive-row';
-                    const danger = drive.pct > 88;
-                    row.innerHTML =
-                        '<div style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;margin-bottom:5px">' +
-                            '<span>Drive ' + drive.letter + '</span>' +
-                            '<span style="font-family:JetBrains Mono,monospace;color:' + (danger ? 'var(--danger)' : 'var(--text-secondary)') + '">' + drive.used_gb + ' / ' + drive.total_gb + ' GB</span>' +
-                        '</div>' +
-                        '<div class="progress-bar"><div class="progress-fill" style="width:' + drive.pct + '%;background:' + (danger ? 'var(--danger)' : 'var(--gradient)') + '"></div></div>';
-                    dc.appendChild(row);
-                });
-
-                // Processes
-                const tb = document.getElementById('processTableBody');
-                tb.innerHTML = '';
-                d.processes.forEach(proc => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML =
-                        '<td>' + proc.pid + '</td>' +
-                        '<td style="color:var(--accent-hover);font-weight:600">' + proc.name + '</td>' +
-                        '<td>' + proc.cpu + '%</td>' +
-                        '<td>' + proc.ram + ' MB</td>' +
-                        '<td style="text-align:right"><button class="btn-danger" style="padding:2px 8px;font-size:10px" onclick="killPid(' + proc.pid + ')">Kill</button></td>';
-                    tb.appendChild(tr);
-                });
-
-} catch(e) {
-                console.error('[fetchStats]', e);
+                updateTelemetry(d);
+            } catch(e) {
+                console.error('[fetchStats top]', e);
             }
         }
 
-        // ============================================================
-        //  AI MATRIX ACTIONS
-        // ============================================================
+        let currentSortKey = 'cpu';
+        let currentSortAsc = false;
+
+        function sortProcesses(key) {
+            if (currentSortKey === key) {
+                currentSortAsc = !currentSortAsc;
+            } else {
+                currentSortKey = key;
+                currentSortAsc = (key === 'name' || key === 'task_id');
+            }
+            renderProcessesTable();
+        }
+
+        function renderProcessesTable() {
+            const tb = document.getElementById('processTableBody');
+            if (!tb || !window.latestProcessesData) return;
+
+            const searchTerm = (document.getElementById('procSearchInput')?.value || '').toLowerCase();
+            const AI_NAMES = ['python', 'koboldcpp', 'ollama', 'lm studio', 'comfyui', 'cuda'];
+
+            let procs = [...window.latestProcessesData];
+
+            // Apply filter
+            if (activeProcFilter === 'python') {
+                procs = procs.filter(p => AI_NAMES.some(ai => (p.name || '').toLowerCase().includes(ai) || (p.raw_name || '').toLowerCase().includes(ai)));
+            } else if (activeProcFilter === 'high') {
+                procs = procs.filter(p => p.cpu > 15 || p.ram > 200);
+            }
+
+            // Apply search
+            if (searchTerm) {
+                procs = procs.filter(p => (p.name || '').toLowerCase().includes(searchTerm) || String(p.pid).includes(searchTerm));
+            }
+
+            procs.sort((a, b) => {
+                let valA = a[currentSortKey];
+                let valB = b[currentSortKey];
+                if (typeof valA === 'string') valA = valA.toLowerCase();
+                if (typeof valB === 'string') valB = valB.toLowerCase();
+                if (valA < valB) return currentSortAsc ? -1 : 1;
+                if (valA > valB) return currentSortAsc ? 1 : -1;
+                return 0;
+            });
+
+            tb.innerHTML = '';
+            procs.forEach(proc => {
+                const tr = document.createElement('tr');
+                const cpuDanger = proc.cpu > 20;
+                const ramDanger = proc.ram > 500;
+                tr.innerHTML = `
+                    <td style="font-family:'JetBrains Mono';font-size:11px;color:var(--accent-hover);font-weight:600">${proc.task_id || 'Task--'}</td>
+                    <td style="font-weight:600;color:#e2e8f0;">${proc.name}</td>
+                    <td style="font-family:'JetBrains Mono';font-size:11px;">${proc.pid}</td>
+                    <td style="font-family:'JetBrains Mono';color:${cpuDanger ? 'var(--danger)' : 'inherit'};font-weight:${cpuDanger ? '700' : '400'}">${proc.cpu}%</td>
+                    <td style="font-family:'JetBrains Mono';color:${ramDanger ? 'var(--warning)' : 'inherit'}">${proc.ram} MB</td>
+                    <td style="text-align:right"><button class="btn-danger" style="padding:2px 6px;font-size:10px" onclick="killPid(${proc.pid})">Kill</button></td>`;
+                tb.appendChild(tr);
+            });
+
+            if (procs.length === 0) {
+                tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">No matching processes.</td></tr>';
+            }
+        }
+
         async function fetchModels() {
             try {
                 const res = await fetch('/api/models');
@@ -874,14 +1163,52 @@ document.getElementById("vramRaw").textContent = gpuErr;
                 d.models.forEach(m => {
                     const o = document.createElement('option');
                     o.value = m; o.textContent = m;
+                    if (m === 'nsfw-prompt-generator-latest.gguf') {
+                        o.selected = true;
+                    }
                     sel.appendChild(o);
                 });
             } catch(e) {}
         }
 
-        async function launchApp(key) { await fetch('/api/launch?app=' + key); setTimeout(fetchStats, 1200); showToast('Launch signal sent for ' + key, 'var(--success)'); }
+        async function launchApp(key) { 
+            await fetch('/api/launch?app=' + key); 
+            showToast('Launch signal sent for ' + key, 'var(--success)'); 
+            switchTab('terminals');
+            setTimeout(() => { fetchStats(); pollTerminals(); }, 600); 
+
+            // Auto-open Chrome App once the web server becomes ready on its port
+            const portMap = { 'ulm_webui': 8890, 'ves_voice': 8895, 'prompt_gen': 9669, 'koboldcpp': 5001 };
+            const port = portMap[key];
+            if (port) {
+                let checks = 0;
+                const checkInterval = setInterval(async () => {
+                    checks++;
+                    if (checks > 20) { clearInterval(checkInterval); return; }
+                    try {
+                        const res = await fetch('/api/stats');
+                        const d = await res.json();
+                        if (d.apps && d.apps[key] && d.apps[key].running) {
+                            clearInterval(checkInterval);
+                            openChromeApp('http://localhost:' + port);
+                            showToast(`Opened ${d.apps[key].name} Chrome App!`, 'var(--success)');
+                        }
+                    } catch(e) {}
+                }, 1000);
+            }
+        }
         async function killApp(key)   { await fetch('/api/kill?app=' + key);   setTimeout(fetchStats, 800);  showToast('Kill signal sent for ' + key,   'var(--danger)'); }
         async function killPid(pid)   { if (confirm('Kill PID ' + pid + '?')) { await fetch('/api/killpid?pid=' + pid); setTimeout(fetchStats, 600); } }
+
+        async function unloadVram(target) {
+            await fetch('/api/model/unload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target: target })
+            });
+            showToast('Unload signal sent for ' + target, 'var(--success)');
+            setTimeout(fetchStats, 1000);
+        }
 
         async function launchKobold() {
             const model   = document.getElementById('ggufSelect').value;
@@ -900,440 +1227,688 @@ document.getElementById("vramRaw").textContent = gpuErr;
             }
         }
 
-        // ============================================================
-        // PROMPT GENERATOR v2 — dynamic word bank engine
-        // ============================================================
-        let promptBank = {};
-        let selectedPresets = {};
-        
+        async function purgePython() {
+            if (confirm('Purge all background Python worker tasks? (Command Center will stay online)')) {
+                const res = await fetch('/api/purge-python', { method: 'POST' });
+                const d = await res.json();
+                showToast(d.message || 'Python workers purged.', 'var(--success)');
+                setTimeout(fetchStats, 1200);
+            }
+        }
+
         async function loadPromptBank() {
             try {
                 const res = await fetch('/api/prompt-bank');
                 promptBank = await res.json();
                 buildPresetPanels();
             } catch(e) {
-                document.getElementById('presetCategories').innerHTML = '<div style="text-align:center;color:var(--danger);padding:20px">Failed to load prompt bank</div>';
+                document.getElementById('presetCategories').innerHTML = '<div style="color:var(--danger)">Failed to load prompt bank</div>';
             }
         }
-        
-        function shuffleArray(arr) { const a = [...arr]; for (let i = a.length-1; i>0; i--) { const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]] = [a[j],a[i]]; } return a; }
-        function pickRandom(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
-        
+
         function buildPresetPanels() {
             const container = document.getElementById('presetCategories');
-            if (!container) return;
             let html = '';
             for (const [catKey, catData] of Object.entries(promptBank)) {
-                const upperKey = catKey.charAt(0).toUpperCase() + catKey.slice(1);
-                html += '<div class="panel">';
-                html += '<div class="panel-title" style="display:flex;justify-content:space-between;align-items:center">';
-                html += '<span>' + catData.label + '</span>';
-                html += '<button onclick="shuffleCategory(\'' + catKey + '\')" style="font-size:11px;padding:3px 10px;background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.3);border-radius:6px;color:var(--accent);cursor:pointer">&#x1F3B2; Shuffle</button>';
-                html += '</div>';
-                html += '<div class="preset-row" id="chips' + upperKey + '">';
-                const allTerms = [];
-                for (const [, terms] of Object.entries(catData.sub)) {
-                    allTerms.push({label: pickRandom(terms), value: pickRandom(terms)});
+                if (catData.sub) {
+                    for (const [subKey, subTerms] of Object.entries(catData.sub)) {
+                        const labelName = catData.label + ' - ' + subKey.charAt(0).toUpperCase() + subKey.slice(1);
+                        const upperKey = catKey + subKey.charAt(0).toUpperCase() + subKey.slice(1);
+                        html += `<div style="margin-bottom:8px">
+                            <div style="font-weight:600;font-size:11px;margin-bottom:4px">${labelName}</div>
+                            <div class="preset-row" id="chips${upperKey}">`;
+                        
+                        subTerms.slice(0, 10).forEach(term => {
+                            html += `<div class="preset-chip" data-group="${catKey}_${subKey}" data-val="${term}" onclick="toggleChip(this)">${term}</div>`;
+                        });
+                        html += `</div></div>`;
+                    }
                 }
-                for (const t of shuffleArray(allTerms).slice(0, 6)) {
-                    html += '<div class="preset-chip" data-group="' + catKey + '" data-val="' + t.value + '">' + t.label + '</div>';
-                }
-                html += '</div></div>';
             }
             container.innerHTML = html;
-            bindChipEvents();
-            selectedPresets = {};
-            updatePreviewTags();
         }
-        
-        function shuffleCategory(catKey) {
-            const catData = promptBank[catKey]; if (!catData) return;
-            const upperKey = catKey.charAt(0).toUpperCase() + catKey.slice(1);
-            const chipRow = document.getElementById('chips' + upperKey);
-            if (!chipRow) return;
-            const selectedVal = selectedPresets[catKey];
-            const allTerms = [];
-            for (const [, terms] of Object.entries(catData.sub)) {
-                allTerms.push({label: pickRandom(terms), value: pickRandom(terms)});
+
+        function toggleChip(el) {
+            const group = el.dataset.group;
+            const val = el.dataset.val;
+            el.classList.toggle('selected');
+            if (el.classList.contains('selected')) {
+                selectedPresets[group] = val;
+            } else {
+                delete selectedPresets[group];
             }
-            const shuffled = shuffleArray(allTerms).slice(0, 6);
-            if (selectedVal && !shuffled.find(function(t){return t.value===selectedVal})) {
-                shuffled[0] = {label: selectedVal, value: selectedVal};
-            }
-            let chipsHtml = '';
-            for (const t of shuffled) {
-                const selClass = (selectedVal && t.value === selectedVal) ? ' selected' : '';
-                chipsHtml += '<div class="preset-chip' + selClass + '" data-group="' + catKey + '" data-val="' + t.value + '">' + t.label + '</div>';
-            }
-            chipRow.innerHTML = chipsHtml;
-            bindChipEvents();
-            updatePreviewTags();
         }
-        
-        function randomizeAll() { buildPresetPanels(); showToast('All presets randomized!', 'var(--accent)'); }
-        function surpriseMe() {
-        selectedPresets = {}; const parts = [];
-        for (const [catKey, catData] of Object.entries(promptBank)) {
-        const ct = [];
-        for (const [, terms] of Object.entries(catData.sub)) { const p = pickRandom(terms); ct.push(p); parts.push(p); }
-        selectedPresets[catKey] = ct.join(', ');
-        }
-        refreshAllChips(); updatePreviewTags();
-        const subject = document.getElementById('promptSubject').value.trim();
-        document.getElementById('previewTags').textContent = (subject ? subject + ', ' : '') + parts.join(', ');
-        showToast('Surprise prompt! ' + parts.length + ' axis picks', 'var(--accent-cyan)');
-        }
-        
-        function refreshAllChips() {
-        for (const ck of Object.keys(promptBank)) {
-        const uk = ck.charAt(0).toUpperCase()+ck.slice(1);
-        const row = document.getElementById('chips'+uk);
-        if(!row)continue;
-        const v=selectedPresets[ck]||'';
-        row.querySelectorAll('.preset-chip').forEach(ch=>ch.classList.toggle('selected',v&&v.indexOf(ch.dataset.val)>=0));
-        }
-        }
-        function bindChipEvents() {
-        document.querySelectorAll('.preset-chip').forEach(ch=>{ch.removeEventListener('click',chipClickHandler);ch.addEventListener('click',chipClickHandler)});
-        }
-        function chipClickHandler() {
-        const g=this.dataset.group;const v=this.dataset.val;
-        if(selectedPresets[g]===v){delete selectedPresets[g];this.classList.remove('selected')}
-        else{this.parentElement.querySelectorAll('.preset-chip').forEach(c=>c.classList.remove('selected'));this.classList.add('selected');selectedPresets[g]=v}
-        updatePreviewTags();
-        }
-        function updatePreviewTags() {
-        const p=Object.values(selectedPresets).filter(Boolean);
-        document.getElementById('previewTags').textContent=p.length?p.join(', '):'-- select presets above --';
-        }
-        
+
         async function fetchOllamaModels() {
-        try{
-        const r=await fetch('/api/ollama/models');
-        const d=await r.json();
-        const s=document.getElementById('ollamaModelSelect');
-        if(d.error){s.innerHTML='<option value="">'+d.error+'</option>';return}
-        s.innerHTML=d.models.length?'':'<option value="">-- No Ollama models found --</option>';
-        d.models.forEach(m=>{const o=document.createElement('option');o.value=m.name;o.textContent=m.name;if(m.name&&(m.name.includes('nsfw')||m.name.includes('prompt')))o.selected=true;s.appendChild(o)});
-        }catch(e){document.getElementById('ollamaModelSelect').innerHTML='<option value="">-- Ollama offline --</option>'}
+            try {
+                const r = await fetch('/api/ollama/models');
+                const d = await r.json();
+                const s1 = document.getElementById('ollamaModelSelect');
+                const s2 = document.getElementById('ollamaSelect');
+                if (s1) s1.innerHTML = '';
+                if (s2) s2.innerHTML = '';
+                if(d.models && d.models.length) {
+                    d.models.forEach(m => {
+                        if (s1) {
+                            const o1 = document.createElement('option');
+                            o1.value = m.name; o1.textContent = m.name;
+                            s1.appendChild(o1);
+                        }
+                        if (s2) {
+                            const o2 = document.createElement('option');
+                            o2.value = m.name; o2.textContent = m.name;
+                            s2.appendChild(o2);
+                        }
+                    });
+                } else {
+                    if (s1) s1.innerHTML = '<option value="">-- No Ollama models found --</option>';
+                    if (s2) s2.innerHTML = '<option value="">-- No Ollama models found --</option>';
+                }
+            } catch(e) {
+                const s1 = document.getElementById('ollamaModelSelect');
+                const s2 = document.getElementById('ollamaSelect');
+                if (s1) s1.innerHTML = '<option value="">-- Ollama Offline --</option>';
+                if (s2) s2.innerHTML = '<option value="">-- Ollama Offline --</option>';
+            }
         }
-        
-        function buildPromptInstruction() {
-        const su=document.getElementById('promptSubject').value.trim();
-        const cx=document.getElementById('promptContext').value.trim();
-        const pr=Object.values(selectedPresets).filter(Boolean);
-        const ps=pr.length?pr.join(', '):'';
-        let i='You are an expert Stable Diffusion / Flux prompt engineer. Generate a detailed, evocative image generation prompt.\n\n';
-        if(su)i+='Subject/Scene: '+su+'\n';
-        if(ps)i+='Required visual tags: '+ps+'\n';
-        if(cx)i+='Additional context: '+cx+'\n';
-        i+='\nRespond ONLY with:\nPOSITIVE: [comma-separated descriptive prompt]\nNEGATIVE: [things to avoid]';
-        return i;
-        }
-        
+
         async function generatePrompt() {
-        const m=document.getElementById('ollamaModelSelect').value;
-        if(!m)return showToast('Select an Ollama model first.','var(--warning)');
-        const b=document.getElementById('generateBtn');b.disabled=true;b.innerHTML='Generating...';
-        document.getElementById('promptLog').textContent='Sending to Ollama ('+m+')...';
-        document.getElementById('promptPositive').textContent='Generating...';
-        document.getElementById('promptNegative').textContent='...';
-        try{
-        const r=await fetch('/api/generate-prompt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:m,prompt:buildPromptInstruction(),stream:false})});
-        if(!r.ok){const e=await r.json();throw new Error(e.error||'Generation failed')}
-        let ft='';
-        const reader=r.body.getReader();const dec=new TextDecoder();
-        while(true){const{done,value}=await reader.read();if(done)break;const c=dec.decode(value,{stream:true});
-        for(const l of c.split('\n')){if(l.startsWith('data: ')){try{const j=JSON.parse(l.slice(6));ft+=j.response||''}catch(e){}}}
-        }
-        const pm=ft.match(/POSITIVE:\s*([\s\S]*?)(?=NEGATIVE:|$)/i);
-        const nm=ft.match(/NEGATIVE:\s*([\s\S]*)$/i);
-        document.getElementById('promptPositive').textContent=(pm?pm[1].trim():ft.trim())||'(empty)';
-        document.getElementById('promptNegative').textContent=(nm?nm[1].trim():'')||'(none)';
-        document.getElementById('promptLog').textContent='Done. Model: '+m;
-        showToast('Prompt generated!','var(--success)');
-        }catch(e){document.getElementById('promptPositive').textContent='ERROR: '+e.message;
-        document.getElementById('promptLog').textContent='Failed: '+e.message;showToast('Failed: '+e.message,'var(--danger)')}
-        finally{b.disabled=false;b.textContent='\u26A1 Generate Prompt via Ollama'}
-        }
-        
-        function copyPrompt(w){const p=document.getElementById('promptPositive').textContent;const n=document.getElementById('promptNegative').textContent;let t=w==='pos'?p:w==='neg'?n:p+'\n\nNEGATIVE: '+n;navigator.clipboard.writeText(t).then(()=>showToast('Copied!','var(--success)'))}
-        //  DATASET CURATOR
-        // ============================================================
-        async function populateSdcVlmModels() {
-            try {
-                const res = await fetch('/api/ollama/models');
-                const d = await res.json();
-                const sel = document.getElementById('sdcVlmModel');
-                sel.innerHTML = '';
-                d.models.forEach(m => {
-                    const o = document.createElement('option');
-                    o.value = m; o.textContent = m;
-                    sel.appendChild(o);
-                });
-                if (!d.models.length) sel.innerHTML = '<option value="">-- No models --</option>';
-            } catch(e) {}
-async function populateSdcVlmModels() {
-            try {
-                const res = await fetch('/api/ollama/models');
-                const d = await res.json();
-                const sel = document.getElementById('sdcVlmModel');
-                if (d.error) { sel.innerHTML = '<option value="">' + d.error + '</option>'; return; }
-                sel.innerHTML = '';
-                d.models.forEach(function(m) {
-                    var o = document.createElement('option');
-                    o.value = m.name;
-                    o.textContent = m.name;
-                    if (m.name && (m.name.includes('vision') || m.name.includes('llava'))) o.selected = true;
-                    sel.appendChild(o);
-                });
-            } catch(e) {}
-        }
-        }
+            const m = document.getElementById('ollamaModelSelect').value;
+            const sub = document.getElementById('promptSubject').value.trim();
+            const ctx = document.getElementById('promptContext').value.trim();
+            const btn = document.getElementById('generateBtn');
+            const targetModel = document.getElementById('targetDiffusionModel').value;
+            
+            if (!m) return showToast('Select an Ollama model first!', 'var(--warning)');
+            if (!sub) return showToast('Enter a subject description!', 'var(--warning)');
+            
+            btn.disabled = true; btn.textContent = 'Generating...';
 
-        async function sdcScan() {
-            const path = document.getElementById('sdcPath').value.trim();
-            if (!path) return showToast('Enter a directory path.', 'var(--warning)');
-            document.getElementById('sdcScanStatus').textContent = 'Scanning...';
-            document.getElementById('sdcGallery').innerHTML = '<div style="color:var(--text-muted);grid-column:1/-1;text-align:center;padding:40px">Scanning...</div>';
-            try {
-                const res = await fetch('/api/sdc/scan?path=' + encodeURIComponent(path));
-                const d = await res.json();
-                if (d.error) throw new Error(d.error);
-                document.getElementById('sdcImageCount').textContent = d.images.length + ' images';
-                document.getElementById('sdcScanStatus').textContent = 'Found ' + d.images.length + ' images.';
-                renderSdcGallery(d.images);
-            } catch(err) {
-                document.getElementById('sdcScanStatus').textContent = 'Error: ' + err.message;
-                showToast('Scan failed: ' + err.message, 'var(--danger)');
+            const activePresets = Object.values(selectedPresets).join(', ');
+            
+            let systemPrompt = "";
+            let prompt = "";
+            
+            if (targetModel === 'flux') {
+                systemPrompt = "You are an expert prompt generator for the Flux image generation model. Flux prompts should be written in natural, descriptive English prose. Focus on describing details, camera shots, framing, clothing materials, environment, composition, mood, and lighting in full, cohesive sentences. Do NOT use tags, quality buzzwords ('masterpiece', '8k', 'photorealistic'), or comma lists. Output ONLY the raw descriptive prompt.";
+                prompt = `Subject: ${sub}. Visual descriptors: ${activePresets}. Atmosphere/Context: ${ctx}. Write a descriptive scene prompt.`;
+            } else if (targetModel === 'sdxl') {
+                systemPrompt = "You are an expert prompt generator for SDXL. SDXL prompts are a blend of clear scene descriptions and specific style keywords. Combine detailed natural sentences with technical camera and style instructions. Output ONLY the raw prompt.";
+                prompt = `Subject: ${sub}. Keywords: ${activePresets}. Context: ${ctx}. Create a detailed SDXL prompt.`;
+            } else if (targetModel === 'sd15') {
+                systemPrompt = "You are an expert prompt generator for Stable Diffusion 1.5. SD 1.5 prompts are structured as a series of short, comma-separated keywords and tags, including quality indicators (e.g. 'masterpiece, best quality, ultra-detailed'). Output ONLY a single line comma-separated tag list.";
+                prompt = `Subject: ${sub}, tags: ${activePresets}, style: ${ctx}`;
+            } else {
+                systemPrompt = "You are an expert prompt generator. Output a visually rich, optimized image generation prompt. Output ONLY the prompt.";
+                prompt = `Subject: ${sub}. Presets: ${activePresets}. Context: ${ctx}`;
             }
-        }
 
-        function renderSdcGallery(images) {
-            const gal = document.getElementById('sdcGallery');
-            gal.innerHTML = '';
-            if (!images.length) {
-                gal.innerHTML = '<div style="color:var(--text-muted);grid-column:1/-1;text-align:center;padding:40px">No images found.</div>';
-                return;
-            }
-            images.forEach(img => {
-                const thumb = document.createElement('div');
-                thumb.className = 'gallery-thumb';
-                thumb.innerHTML =
-                    '<img src="/api/sdc/thumb?path=' + encodeURIComponent(img.path) + '" loading="lazy" alt="' + img.name + '">' +
-                    '<div class="thumb-label">' + img.name + '</div>';
-                thumb.onclick = () => selectSdcImage(img, thumb);
-                gal.appendChild(thumb);
-            });
-        }
-
-        function selectSdcImage(img, el) {
-            document.querySelectorAll('.gallery-thumb').forEach(t => t.classList.remove('selected'));
-            el.classList.add('selected');
-            sdcSelectedFile = img;
-            document.getElementById('sdcSelectedPreview').innerHTML =
-                '<img src="/api/sdc/thumb?path=' + encodeURIComponent(img.path) + '" style="max-width:100%;max-height:200px;border-radius:10px;border:1px solid var(--border)">' +
-                '<p style="font-size:11px;color:var(--text-muted);margin-top:8px;font-family:JetBrains Mono,monospace">' + img.name + '</p>';
-        }
-
-        async function sdcTagSelected() {
-            if (!sdcSelectedFile) return showToast('Select an image first.', 'var(--warning)');
-            const model = document.getElementById('sdcVlmModel').value;
-            if (!model) return showToast('Select a VLM model.', 'var(--warning)');
-            const instruction = document.getElementById('sdcTagInstruction').value;
-            const btn = document.getElementById('sdcTagBtn');
-            btn.disabled = true; btn.textContent = 'Tagging...';
-            document.getElementById('sdcTagOutput').textContent = 'Sending to Ollama VLM...';
             try {
-                const res = await fetch('/api/sdc/tag-vlm', {
+                const res = await fetch('/api/generate-prompt', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ path: sdcSelectedFile.path, model: model, instruction: instruction })
+                    body: JSON.stringify({ model: m, prompt: prompt, system: systemPrompt, stream: false })
                 });
-                const d = await res.json();
-                if (d.error) throw new Error(d.error);
-                document.getElementById('sdcTagOutput').textContent = d.tags;
-                showToast('Tags generated!', 'var(--success)');
-            } catch(err) {
-                document.getElementById('sdcTagOutput').textContent = 'Error: ' + err.message;
-                showToast('Tag failed: ' + err.message, 'var(--danger)');
+                if (res.ok) {
+                    const text = await res.text();
+                    document.getElementById('promptPositive').textContent = text;
+                }
+            } catch(e) {
+                document.getElementById('promptPositive').textContent = "Failed: " + e.message;
             } finally {
-                btn.disabled = false; btn.textContent = 'Tag Selected Image';
+                btn.disabled = false; btn.textContent = 'Generate Prompt';
             }
         }
 
-        // ============================================================
-        //  TERMINALS
-        // ============================================================
+        let autoScrollEnabled = true;
+        let activeTerminalFilter = 'all';
+
+        function toggleAutoScroll() {
+            autoScrollEnabled = !autoScrollEnabled;
+            const btn = document.getElementById('pill-scroll-toggle');
+            if (autoScrollEnabled) {
+                btn.style.background = 'rgba(45,212,191,0.15)';
+                btn.style.borderColor = 'rgba(45,212,191,0.35)';
+                btn.style.color = '#5eead4';
+                btn.textContent = '📌 Auto-Scroll: ON';
+            } else {
+                btn.style.background = 'rgba(244,63,94,0.15)';
+                btn.style.borderColor = 'rgba(244,63,94,0.35)';
+                btn.style.color = '#f43f5e';
+                btn.textContent = '📌 Auto-Scroll: OFF';
+            }
+        }
+
+        function setTerminalFilter(filter, el) {
+            activeTerminalFilter = filter;
+            document.querySelectorAll('#tabContent-terminals .pill').forEach(p => {
+                if (p.id.startsWith('termFilter-')) p.classList.remove('active');
+            });
+            el.classList.add('active');
+            pollTerminals();
+        }
+
+        async function sendTerminalCommand() {
+            const input = document.getElementById('termCmdInput');
+            const cmd = input.value.trim();
+            if (!cmd) return;
+
+            showToast('Executing command...', 'var(--accent)');
+            input.value = '';
+
+            try {
+                const res = await fetch('/api/terminals/exec', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: cmd })
+                });
+                const d = await res.json();
+                if (res.ok) {
+                    showToast('Command finished', 'var(--success)');
+                } else {
+                    showToast('Command error: ' + (d.error || 'Unknown'), 'var(--danger)');
+                }
+                pollTerminals();
+            } catch(e) {
+                showToast('Failed to execute command', 'var(--danger)');
+            }
+        }
+
+        function copyTerminalLog(key) {
+            const tbody = document.getElementById('tbody-' + key);
+            if (!tbody) return;
+            navigator.clipboard.writeText(tbody.innerText);
+            showToast('Terminal log copied to clipboard!', 'var(--success)');
+        }
+
+        function toggleExpandTerminal(key) {
+            const win = document.getElementById('term-' + key);
+            if (!win) return;
+            if (win.style.flex === '1 1 100%') {
+                win.style.flex = '1 1 450px';
+            } else {
+                win.style.flex = '1 1 100%';
+            }
+        }
+
         async function pollTerminals() {
             try {
                 const res = await fetch('/api/terminals/logs');
                 const d = await res.json();
                 const grid = document.getElementById('terminalGrid');
                 if (!d.streams || Object.keys(d.streams).length === 0) {
-                    grid.innerHTML = '<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:60px;grid-column:1/-1">No active process streams. Launch Forge, Kobold, or Ollama to see terminal output here.</div>';
+                    grid.innerHTML = '<div style="color:var(--text-muted);font-size:12px;text-align:center;padding:40px;width:100%">No active terminal output.</div>';
                     return;
                 }
+                
+                // Clear placeholder if exists
+                if (grid.querySelector('div[style*="text-align:center"]')) {
+                    grid.innerHTML = '';
+                }
+
                 for (const [key, lines] of Object.entries(d.streams)) {
+                    // Check filter visibility
+                    if (activeTerminalFilter === 'error') {
+                        const hasErr = lines.some(l => l.toUpperCase().includes('ERROR') || l.toUpperCase().includes('FAILED'));
+                        if (!hasErr) {
+                            const existing = document.getElementById('term-' + key);
+                            if (existing) existing.style.display = 'none';
+                            continue;
+                        }
+                    } else if (activeTerminalFilter !== 'all' && key.toLowerCase() !== activeTerminalFilter.toLowerCase()) {
+                        const existing = document.getElementById('term-' + key);
+                        if (existing) existing.style.display = 'none';
+                        continue;
+                    }
+
                     let win = document.getElementById('term-' + key);
                     if (!win) {
                         win = document.createElement('div');
                         win.className = 'terminal-window';
                         win.id = 'term-' + key;
-                        win.innerHTML =
-                            '<div class="terminal-header">' +
-                                '<span class="terminal-title">' + key.toUpperCase() + '</span>' +
-                                '<div style="display:flex;align-items:center;gap:8px">' +
-                                    '<div class="terminal-dot"></div>' +
-                                    '<button onclick="clearLog(\'' + key + '\')" style="font-size:10px;padding:2px 8px">Clear</button>' +
-                                '</div>' +
-                            '</div>' +
-                            '<div class="terminal-body" id="tbody-' + key + '"></div>';
+                        win.innerHTML = `
+                            <div class="terminal-header">
+                                <span class="terminal-title">${key.toUpperCase()}</span>
+                                <div style="display:flex;align-items:center;gap:6px">
+                                    <input type="text" placeholder="🔍 Search..." style="font-size:9px; padding:2px 6px; width:90px;" oninput="searchTerminalLog('${key}', this.value)">
+                                    <div class="terminal-dot"></div>
+                                    <button style="font-size:9px;padding:2px 6px" onclick="exportTerminalLog('${key}')">💾 Save</button>
+                                    <button style="font-size:9px;padding:2px 6px" onclick="copyTerminalLog('${key}')">📋 Copy</button>
+                                    <button style="font-size:9px;padding:2px 6px" onclick="toggleExpandTerminal('${key}')">🗖 Expand</button>
+                                    <button style="font-size:9px;padding:2px 6px" onclick="clearLog('${key}')">Clear</button>
+                                </div>
+                            </div>
+                            <div class="terminal-body" id="tbody-${key}"></div>`;
                         grid.appendChild(win);
                     }
+                    win.style.display = 'flex';
+
                     const body = document.getElementById('tbody-' + key);
                     body.innerHTML = '';
-                    lines.forEach(line => {
-                        const span = document.createElement('div');
-                        span.className = 'terminal-line';
-                        span.textContent = line;
-                        if (line.includes('ERROR') || line.includes('error')) span.style.color = 'var(--danger)';
-                        else if (line.includes('WARNING') || line.includes('warn')) span.style.color = 'var(--warning)';
-                        body.appendChild(span);
+                    
+                    // Performance Guard: Cap DOM line buffer to last 500 lines
+                    const cappedLines = lines.slice(-500);
+                    cappedLines.forEach(line => {
+                        const div = document.createElement('div');
+                        div.className = 'terminal-line';
+                        div.textContent = line;
+                        if (line.toUpperCase().includes('ERROR') || line.toUpperCase().includes('FAILED') || line.toUpperCase().includes('CRITICAL')) {
+                            div.style.color = 'var(--danger)';
+                            div.style.fontWeight = 'bold';
+                        }
+                        body.appendChild(div);
                     });
-                    body.scrollTop = body.scrollHeight;
+
+                    if (autoScrollEnabled) {
+                        body.scrollTop = body.scrollHeight;
+                    }
                 }
             } catch(e) {}
         }
 
+        function searchTerminalLog(key, query) {
+            const body = document.getElementById('tbody-' + key);
+            if (!body) return;
+            const lines = body.querySelectorAll('.terminal-line');
+            const q = query.toLowerCase();
+            lines.forEach(l => {
+                if (!q || l.textContent.toLowerCase().includes(q)) {
+                    l.style.display = 'block';
+                    if (q) l.style.background = 'rgba(168,85,247,0.2)';
+                    else l.style.background = 'transparent';
+                } else {
+                    l.style.display = 'none';
+                }
+            });
+        }
+
+        function exportTerminalLog(key) {
+            const body = document.getElementById('tbody-' + key);
+            if (!body) return;
+            const text = Array.from(body.querySelectorAll('.terminal-line')).map(l => l.textContent).join('\n');
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${key}_terminal_${Date.now()}.log`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast(`Exported ${key} log!`, 'var(--success)');
+        }
+
+        // ---- THEME CUSTOMIZER ENGINE ----
+        function changeTheme(themeKey) {
+            const root = document.documentElement;
+            if (themeKey === 'cyan') {
+                root.style.setProperty('--accent', '#22D3EE');
+                root.style.setProperty('--accent-celadon', '#22D3EE');
+                root.style.setProperty('--gradient-celadon', 'linear-gradient(135deg, #22D3EE 0%, #3B82F6 100%)');
+            } else if (themeKey === 'purple') {
+                root.style.setProperty('--accent', '#A855F7');
+                root.style.setProperty('--accent-celadon', '#C084FC');
+                root.style.setProperty('--gradient-celadon', 'linear-gradient(135deg, #A855F7 0%, #EC4899 100%)');
+            } else if (themeKey === 'crimson') {
+                root.style.setProperty('--accent', '#F43F5E');
+                root.style.setProperty('--accent-celadon', '#FB7185');
+                root.style.setProperty('--gradient-celadon', 'linear-gradient(135deg, #F43F5E 0%, #991B1B 100%)');
+            } else { // Celadon default
+                root.style.setProperty('--accent', '#A855F7');
+                root.style.setProperty('--accent-celadon', '#2DD4BF');
+                root.style.setProperty('--gradient-celadon', 'linear-gradient(135deg, #2DD4BF 0%, #A855F7 80%)');
+            }
+            showToast('Theme updated to ' + themeKey, 'var(--success)');
+        }
+
+        // ---- VRAM BUDGET CALCULATOR ENGINE ----
+        function applyVramPreset(presetKey) {
+            const params = document.getElementById('calcParams');
+            const quant = document.getElementById('calcQuant');
+            const context = document.getElementById('calcContext');
+            const kv = document.getElementById('calcKvPrecision');
+
+            if (presetKey === 'qwen14b') {
+                params.value = 14; quant.value = '4.0'; context.value = 16384; kv.value = '1.0';
+            } else if (presetKey === 'nemo12b') {
+                params.value = 12; quant.value = '5.0'; context.value = 16384; kv.value = '1.0';
+            } else if (presetKey === 'llama8b') {
+                params.value = 8; quant.value = '8.0'; context.value = 16384; kv.value = '1.0';
+            } else if (presetKey === 'deepseek16b') {
+                params.value = 16; quant.value = '4.0'; context.value = 16384; kv.value = '1.0';
+            }
+            recalcVramBudget();
+        }
+
+        function recalcVramBudget() {
+            const paramsB = parseFloat(document.getElementById('calcParams').value);
+            const quantBpw = parseFloat(document.getElementById('calcQuant').value);
+            const contextTokens = parseInt(document.getElementById('calcContext').value);
+            const kvMultiplier = parseFloat(document.getElementById('calcKvPrecision').value);
+
+            document.getElementById('calcParamsLabel').textContent = paramsB + 'B';
+            document.getElementById('calcContextLabel').textContent = contextTokens.toLocaleString();
+
+            // Formula: Weights MB = (Billion Params * Bits per weight / 8) * 1.08 overhead
+            const weightsMb = Math.round((paramsB * 1000 * quantBpw / 8) * 1.05);
+            
+            // KV Cache MB = (Layers * Heads * HeadDim * Context * 2 * KV_bytes) approx: (ParamsB * 0.045 * Context / 1024) * kvMultiplier
+            const kvMb = Math.round((paramsB * 0.042 * (contextTokens / 1024)) * 16 * kvMultiplier);
+
+            const cudaContextMb = 550;
+            const totalMb = weightsMb + kvMb + cudaContextMb;
+            const totalGb = (totalMb / 1024).toFixed(2);
+
+            document.getElementById('calcWeightsMb').textContent = weightsMb + ' MB';
+            document.getElementById('calcKvMb').textContent = kvMb + ' MB';
+            document.getElementById('calcTotalGb').textContent = totalGb + ' GB';
+
+            const fillBar = document.getElementById('calcBarFill');
+            const verdict = document.getElementById('calcStatusVerdict');
+            const pct = Math.min(100, (totalGb / 12.0) * 100);
+            fillBar.style.width = pct + '%';
+
+            if (totalGb <= 10.5) {
+                fillBar.style.background = 'var(--gradient-celadon)';
+                verdict.style.color = 'var(--success)';
+                verdict.textContent = `✅ Optimal Allocation: ${totalGb} GB fits comfortably inside RTX 4070 VRAM budget.`;
+            } else if (totalGb <= 12.0) {
+                fillBar.style.background = 'linear-gradient(135deg, #F59E0B 0%, #EF4444 100%)';
+                verdict.style.color = 'var(--warning)';
+                verdict.textContent = `⚠️ Tight Fit: ${totalGb} GB approaches 12 GB hardware maximum (DWM UI lag possible).`;
+            } else {
+                fillBar.style.background = 'linear-gradient(135deg, #F43F5E 0%, #991B1B 100%)';
+                verdict.style.color = 'var(--danger)';
+                verdict.textContent = `🚨 VRAM Overflow: ${totalGb} GB exceeds 12 GB VRAM limit! System RAM offloading will occur.`;
+            }
+        }
+
+        // ---- GLOBAL COMMAND PALETTE (Ctrl + K) ENGINE ----
+        const CMD_PALETTE_ACTIONS = [
+            { icon: '🐍', title: 'Purge Python Workers', sub: 'Surgical recovery — keeps Command Center live', run: () => purgePython() },
+            { icon: '🧹', title: 'Flush VRAM & AI Backends', sub: 'Nuke active KoboldCPP, Ollama, and GPU pipelines', run: () => executePanic() },
+            { icon: '💻', title: 'Switch to System Monitor Tab', sub: 'View live sparkline gauges & telemetry', run: () => switchTab('system') },
+            { icon: '🧠', title: 'Switch to AI Matrix Tab', sub: 'Manage GGUF models & VRAM flags', run: () => switchTab('ai') },
+            { icon: '🖥️', title: 'Switch to Terminals Tab', sub: 'Interactive CLI & live stream logs', run: () => switchTab('terminals') },
+            { icon: '🚀', title: 'Switch to Launchers Tab', sub: 'Workstation service dashboard', run: () => switchTab('launchers') },
+            { icon: '🧮', title: 'Switch to VRAM Calculator Tab', sub: 'Model weights & KV cache budget calculator', run: () => switchTab('vramcalc') },
+            { icon: '🚀', title: 'Launch KoboldCPP Engine', sub: 'Start KoboldCPP GGUF server on port 5001', run: () => launchKobold() },
+            { icon: '🔮', title: 'Launch ULM WebUI', sub: 'Start Universal Local Memory dashboard', run: () => launchApp('ulm_webui') },
+            { icon: '🗣️', title: 'Launch Ves Voice WebUI', sub: 'Start F5-TTS voice interface', run: () => launchApp('ves_voice') },
+            { icon: '✨', title: 'Launch ZIT Prompt Generator', sub: 'Start prompt generator workstation', run: () => launchApp('prompt_gen') },
+            { icon: '📂', title: 'Open D:\\AI\\Launchers Directory', sub: 'Open launchers folder in Windows Explorer', run: () => openLaunchersFolder() },
+        ];
+
+        function openCmdPalette() {
+            const modal = document.getElementById('cmdPaletteModal');
+            const input = document.getElementById('cmdPaletteInput');
+            if (!modal || !input) return;
+            modal.classList.remove('hidden');
+            input.value = '';
+            filterCmdPalette();
+            setTimeout(() => input.focus(), 50);
+        }
+
+        function closeCmdPalette() {
+            const modal = document.getElementById('cmdPaletteModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function filterCmdPalette() {
+            const query = (document.getElementById('cmdPaletteInput')?.value || '').toLowerCase();
+            const container = document.getElementById('cmdPaletteResults');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const matched = CMD_PALETTE_ACTIONS.filter(a => a.title.toLowerCase().includes(query) || a.sub.toLowerCase().includes(query));
+            if (!matched.length) {
+                container.innerHTML = '<div style="color:var(--text-muted); font-size:11px; text-align:center; padding:16px;">No matching actions found.</div>';
+                return;
+            }
+
+            matched.forEach((act, idx) => {
+                const item = document.createElement('div');
+                item.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-radius:8px; background:rgba(255,255,255,0.02); cursor:pointer; border:1px solid transparent; transition:all 0.15s;';
+                item.onmouseenter = () => item.style.borderColor = 'var(--accent)';
+                item.onmouseleave = () => item.style.borderColor = 'transparent';
+                item.onclick = () => {
+                    closeCmdPalette();
+                    act.run();
+                };
+                item.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span style="font-size:16px;">${act.icon}</span>
+                        <div>
+                            <div style="font-size:12px; font-weight:700; color:#e2e8f0;">${act.title}</div>
+                            <div style="font-size:10px; color:var(--text-muted);">${act.sub}</div>
+                        </div>
+                    </div>
+                    <span style="font-size:10px; color:var(--accent-celadon); font-family:'JetBrains Mono';">↵ Execute</span>`;
+                container.appendChild(item);
+            });
+        }
+
+        function handleCmdPaletteKey(e) {
+            if (e.key === 'Escape') closeCmdPalette();
+            if (e.key === 'Enter') {
+                const first = document.getElementById('cmdPaletteResults')?.firstElementChild;
+                if (first) first.click();
+            }
+        }
+
+        // Global Ctrl + K keydown listener
+        window.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                openCmdPalette();
+            }
+        });
+
         async function clearLog(key) {
             await fetch('/api/terminals/clear?key=' + encodeURIComponent(key));
-            pollTerminals();
+            const tbody = document.getElementById('tbody-' + key);
+            if (tbody) tbody.innerHTML = '';
         }
 
         async function clearAllLogs() {
             await fetch('/api/terminals/clear-all');
-            document.getElementById('terminalGrid').innerHTML = '';
-            pollTerminals();
+            document.getElementById('terminalGrid').innerHTML = '<div style="color:var(--text-muted);font-size:12px;text-align:center;padding:40px;width:100%">No active terminal output.</div>';
         }
 
-        // ============================================================
-        //  LAUNCHERS
-        // ============================================================
+        let activeLauncherFilter = 'all';
+        let latestLaunchersData = [];
+
+        function setLauncherFilter(filter, el) {
+            activeLauncherFilter = filter;
+            document.querySelectorAll('#tabContent-launchers .pill').forEach(p => {
+                if (p.id.startsWith('launcherFilter-')) p.classList.remove('active');
+            });
+            el.classList.add('active');
+            renderLaunchersGrid();
+        }
+
         async function loadLaunchers() {
             try {
                 const res = await fetch('/api/launchers');
                 const d = await res.json();
-                const con = document.getElementById('launchersContainer');
-                con.innerHTML = '';
-                if (!d.launchers || !d.launchers.length) {
-                    con.innerHTML = '<div style="color:var(--text-muted);grid-column:1/-1;text-align:center;padding:40px">No launchers found in D:\\\\AI\\\\Launchers</div>';
-                    return;
-                }
-                d.launchers.forEach(item => {
-                    const ext = item.filename.split('.').pop();
+                latestLaunchersData = d.launchers || [];
+                renderLaunchersGrid();
+            } catch(e) {
+                console.error('[loadLaunchers]', e);
+            }
+        }
+
+        function renderLaunchersGrid() {
+            const con = document.getElementById('launchersContainer');
+            if (!con) return;
+            con.innerHTML = '';
+
+            const searchTerm = (document.getElementById('launcherSearchInput')?.value || '').toLowerCase();
+            let items = [...latestLaunchersData];
+
+            // Apply category filter
+            if (activeLauncherFilter === 'img') {
+                items = items.filter(i => (i.category || '').includes('Image Generation'));
+            } else if (activeLauncherFilter === 'llm') {
+                items = items.filter(i => (i.category || '').includes('LLMs'));
+            } else if (activeLauncherFilter === 'voice') {
+                items = items.filter(i => (i.category || '').includes('Voice & Memory'));
+            } else if (activeLauncherFilter === 'tools') {
+                items = items.filter(i => (i.category || '').includes('Tools & Curation'));
+            }
+
+            // Apply search filter
+            if (searchTerm) {
+                items = items.filter(i => (i.name || '').toLowerCase().includes(searchTerm) || (i.description || '').toLowerCase().includes(searchTerm));
+            }
+
+            if (!items.length) {
+                con.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:40px;width:100%">No launcher services match criteria.</div>';
+                return;
+            }
+
+            // Group by category
+            const groups = {};
+            items.forEach(item => {
+                const cat = item.category || '🛠️ Tools & Curation';
+                if (!groups[cat]) groups[cat] = [];
+                groups[cat].push(item);
+            });
+
+            for (const [catName, catItems] of Object.entries(groups)) {
+                const groupHeader = document.createElement('div');
+                groupHeader.style.cssText = 'width:100%; font-size:13px; font-weight:700; color:#d8b4fe; margin-top:10px; margin-bottom:6px; padding-bottom:4px; border-bottom:1px solid rgba(168,85,247,0.2);';
+                groupHeader.textContent = catName;
+                con.appendChild(groupHeader);
+
+                const grid = document.createElement('div');
+                grid.className = 'launchers-grid';
+                grid.style.cssText = 'display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px; margin-bottom:12px;';
+
+                catItems.forEach(item => {
                     const card = document.createElement('div');
                     card.className = 'launcher-card';
-                    card.innerHTML =
-                        '<div><div class="launcher-title">' + item.name + '</div><div class="launcher-ext">' + ext + '</div></div>' +
-                        '<button class="btn-primary" onclick="launchFile(\'' + item.filename.replace(/'/g, "\\'") + '\')" style="width:100%">Execute</button>';
-                    con.appendChild(card);
+                    card.style.cssText = 'display:flex; flex-direction:column; justify-content:space-between; padding:14px; border-radius:12px; background:rgba(15,23,42,0.7); border:1px solid rgba(168,85,247,0.2); position:relative; min-height:135px; backdrop-filter:blur(10px); transition:all 0.2s ease;';
+
+                    const statusBadge = item.port ? 
+                        (item.online ? `<span style="font-size:9px; padding:3px 8px; border-radius:6px; background:rgba(34,197,94,0.15); color:#4ade80; border:1px solid rgba(34,197,94,0.3); font-weight:700;">🟢 Online (Port ${item.port})</span>` :
+                                       `<span style="font-size:9px; padding:3px 8px; border-radius:6px; background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3);">🔴 Offline</span>`)
+                        : '';
+
+                    const openBtn = (item.online && item.port) ? 
+                        `<button class="btn-primary" style="background:rgba(34,211,238,0.2); border-color:var(--accent-cyan); color:#6ee7b7; font-size:10px; padding:6px 10px;" onclick="openChromeApp('http://localhost:${item.port}')">🌐 Open Chrome App</button>` : '';
+
+                    let launchOnClick = '';
+                    if (item.app_key) {
+                        launchOnClick = `onclick="launchApp('${item.app_key}')"`;
+                    } else if (item.filename) {
+                        launchOnClick = `onclick="launchFile('${item.filename}')"`;
+                    } else {
+                        launchOnClick = `disabled`;
+                    }
+
+                    const launchBtnLabel = item.online ? '⚡ Relaunch App' : '🚀 Launch Service';
+
+                    card.innerHTML = `
+                        <div>
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+                                <div style="font-size:13px; font-weight:700; color:#e2e8f0;">${item.icon} ${item.name}</div>
+                                ${statusBadge}
+                            </div>
+                            <div style="font-size:10px; color:var(--text-muted); margin-top:6px; line-height:1.4;">${item.description}</div>
+                        </div>
+                        <div style="display:flex; gap:6px; margin-top:12px;">
+                            <button class="btn-primary" style="flex:1; font-size:10px; padding:6px 10px;" ${launchOnClick}>${launchBtnLabel}</button>
+                            ${openBtn}
+                        </div>`;
+                    grid.appendChild(card);
                 });
-            } catch(e) {}
+                con.appendChild(grid);
+            }
+        }
+
+        function openChromeApp(url) {
+            fetch('/api/open-chrome-app?url=' + encodeURIComponent(url));
         }
 
         async function launchFile(filename) {
             try {
                 const res = await fetch('/api/launch-file?file=' + encodeURIComponent(filename));
                 const d = await res.json();
-                showToast('Launched: ' + filename, 'var(--success)');
-            } catch(e) { showToast('Launch failed', 'var(--danger)'); }
+                showToast(d.message || 'Launched silently', 'var(--success)');
+                switchTab('terminals');
+                setTimeout(pollTerminals, 600);
+
+                // Check shortcut metadata port and auto-open Chrome App when ready
+                const fn = filename.toLowerCase();
+                let port = null;
+                if (fn.includes('comfy')) port = 8188;
+                else if (fn.includes('forge') || fn.includes('stable diffusion')) port = 7860;
+                else if (fn.includes('curator')) port = 8501;
+
+                if (port) {
+                    let checks = 0;
+                    const checkInterval = setInterval(async () => {
+                        checks++;
+                        if (checks > 30) { clearInterval(checkInterval); return; }
+                        try {
+                            const res = await fetch('/api/launchers');
+                            const data = await res.json();
+                            const item = (data.launchers || []).find(l => l.port === port);
+                            if (item && item.online) {
+                                clearInterval(checkInterval);
+                                openChromeApp('http://localhost:' + port);
+                                showToast(`Opened ${item.name} Chrome App!`, 'var(--success)');
+                            }
+                        } catch(e) {}
+                    }, 1000);
+                }
+            } catch(e) {
+                showToast('Launch failed', 'var(--danger)');
+            }
         }
 
-        async function openLaunchersFolder() {
-            await fetch('/api/open-launchers-folder');
-        }
+        async function openLaunchersFolder() { await fetch('/api/open-launchers-folder'); }
 
-        // ============================================================
-        //  FILE EXPLORER
-        // ============================================================
         async function loadExplorerShortcuts() {
-            try {
-                const res = await fetch('/api/folders');
-                const d = await res.json();
-                const con = document.getElementById('explorerShortcutsContainer');
-                con.innerHTML = '';
-                ['C:\\\\', 'D:\\\\', 'E:\\\\', 'G:\\\\'].forEach(dr => {
-                    const item = document.createElement('div');
-                    item.className = 'shortcut-item';
-                    item.onclick = () => loadDirectory(dr);
-                    item.innerHTML = '<span>&#128190;</span><span style="font-weight:700">Drive ' + dr.slice(0,2) + '</span>';
-                    con.appendChild(item);
-                });
-                const div = document.createElement('div');
-                div.style.cssText = 'height:1px;background:var(--border);margin:6px 0';
-                con.appendChild(div);
-                d.folders.forEach(f => {
-                    const item = document.createElement('div');
-                    item.className = 'shortcut-item';
-                    item.onclick = () => loadDirectory(f.path);
-                    item.innerHTML = '<span>&#128193;</span><span>' + f.name + '</span>';
-                    con.appendChild(item);
-                });
-            } catch(e) {}
+            const con = document.getElementById('explorerShortcutsContainer');
+            con.innerHTML = '';
+            ['C:\\\\', 'D:\\\\', 'E:\\\\', 'G:\\\\'].forEach(dr => {
+                const item = document.createElement('div');
+                item.className = 'shortcut-item';
+                item.onclick = () => loadDirectory(dr);
+                item.textContent = 'Drive ' + dr.slice(0, 2);
+                con.appendChild(item);
+            });
         }
 
         async function loadDirectory(path) {
             currentExplorerPath = path;
             document.getElementById('currentPathLabel').textContent = path;
             const con = document.getElementById('explorerList');
-            con.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)">Loading...</div>';
+            con.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted)">Loading...</div>';
             try {
                 const res = await fetch('/api/explorer/list?path=' + encodeURIComponent(path));
                 const d = await res.json();
-                if (d.error) { con.innerHTML = '<div style="text-align:center;padding:40px;color:var(--danger)">' + d.error + '</div>'; return; }
                 con.innerHTML = '';
-                if (!d.items.length) { con.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)">Folder is empty</div>'; return; }
                 d.items.forEach(item => {
                     const row = document.createElement('div');
                     row.className = 'file-item';
-                    row.setAttribute('data-path', item.path);
-                    row.setAttribute('data-name', item.name);
-                    row.setAttribute('data-isdir', item.is_dir ? 'true' : 'false');
-                    
-                    const icon = item.is_dir ? '&#128193;' : getFileIcon(item.name);
-                    const size = item.is_dir ? '' : item.size + ' MB';
-                    row.innerHTML =
-                        '<div class="file-meta" onclick="handleFileClick(this)">' +
-                            '<span class="file-icon">' + icon + '</span>' +
-                            '<span class="file-name">' + item.name + '</span>' +
-                            '<span class="file-size">' + size + '</span>' +
-                        '</div>' +
-                        '<div class="file-actions"><button onclick="handleShowClick(this)" style="padding:2px 8px;font-size:10px">Show</button></div>';
+                    row.innerHTML = `
+                        <div onclick="navigateExplorer('${item.path}', ${item.is_dir})">
+                            <span>${item.is_dir ? '&#128193;' : '&#128196;'}</span>
+                            <span>${item.name}</span>
+                        </div>
+                        <button onclick="openFileDirectory('${item.path}')">Show</button>`;
                     con.appendChild(row);
                 });
-            } catch(e) { con.innerHTML = '<div style="text-align:center;padding:40px;color:var(--danger)">Connection error</div>'; }
+            } catch(e) {}
         }
 
-        function getFileIcon(name) {
-            const ext = name.split('.').pop().toLowerCase();
-            if (['png','jpg','jpeg','webp','gif'].includes(ext)) return '&#128444;';
-            if (['txt','json','yaml','yml','md','bat','py'].includes(ext)) return '&#128196;';
-            if (['safetensors','bin','ckpt','gguf'].includes(ext)) return '&#128230;';
-            return '&#128196;';
+        function navigateExplorer(path, isDir) {
+            if (isDir) loadDirectory(path);
         }
 
-        function navigateUp() {
-            const sep = currentExplorerPath.includes('\\\\') ? '\\\\\\\\' : '\\\\';
-            const parts = currentExplorerPath.split(sep);
-            if (parts.length > 1) {
-                parts.pop();
-                let parent = parts.join('\\\\');
-                if (parent.match(/^[A-Z]:$/i)) parent += '\\\\';
-                loadDirectory(parent);
-            }
-        }
-// FIXED: Use standard Windows path splitting
+        async function openFileDirectory(p) { await fetch('/api/open-file-dir?path=' + encodeURIComponent(p)); }
+
         function navigateUp() {
             const parts = currentExplorerPath.split('\\\\');
             if (parts[parts.length - 1] === '') parts.pop();
@@ -1345,88 +1920,160 @@ async function populateSdcVlmModels() {
             }
         }
 
-        async function openCurrentDirInHost() { await fetch('/api/open-folder?path=' + encodeURIComponent(currentExplorerPath)); }
-        async function openFileDirectory(p)   { await fetch('/api/open-file-dir?path=' + encodeURIComponent(p)); }
-
-        function handleFileClick(el) {
-            const card = el.closest('[data-path]');
-            const path = card.getAttribute('data-path');
-            const name = card.getAttribute('data-name');
-            const isDir = card.getAttribute('data-isdir') === 'true';
-            if (isDir) {
-                loadDirectory(path);
-            } else {
-                previewFile(path, name);
-            }
-        }
-
-        function handleShowClick(el) {
-            const card = el.closest('[data-path]');
-            const path = card.getAttribute('data-path');
-            openFileDirectory(path);
-        }
-
-        async function previewFile(path, name) {
-            const ext = name.split('.').pop().toLowerCase();
-            const lb = document.getElementById('mediaLightbox');
-            const content = document.getElementById('lightboxContent');
-            content.innerHTML = '<div style="color:#fff">Loading...</div>';
-            lb.style.display = 'flex';
-            if (['png','jpg','jpeg','webp','gif'].includes(ext)) {
-                content.innerHTML = '<h3 style="font-size:14px;margin-bottom:8px">' + name + '</h3><img src="/api/explorer/view?path=' + encodeURIComponent(path) + '" style="max-width:100%;max-height:480px;border-radius:10px;border:1px solid var(--border)">';
-            } else if (['txt','json','yaml','yml','md','bat','py'].includes(ext)) {
-                try {
-                    const res = await fetch('/api/explorer/view?path=' + encodeURIComponent(path));
-                    const text = await res.text();
-                    content.innerHTML = '<h3 style="font-size:14px;margin-bottom:8px">' + name + '</h3><pre style="width:660px;height:420px;overflow:auto;text-align:left;background:rgba(0,0,0,0.4);padding:14px;border-radius:10px;font-family:JetBrains Mono,monospace;font-size:11px;white-space:pre-wrap;border:1px solid var(--border);color:var(--text-secondary)">' + escapeHtml(text) + '</pre>';
-                } catch(e) { content.innerHTML = '<div style="color:var(--danger)">Failed to load preview</div>'; }
-            } else {
-                content.innerHTML = '<h3>' + name + '</h3><p style="color:var(--text-muted);font-size:12px;margin-top:8px">Binary file — cannot preview inline.</p><button class="btn-primary" style="margin-top:16px" data-path="' + path + '" onclick="handleShowClick(this)">Open in Windows</button>';
-            }
-        }
-
-        function closeLightbox() { document.getElementById('mediaLightbox').style.display = 'none'; }
-        function escapeHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
-
-        // ============================================================
-        //  SEARCH
-        // ============================================================
         function checkSearchEnter(e) { if (e.key === 'Enter') triggerSearch(); }
         async function triggerSearch() {
             const val = document.getElementById('searchInput').value.trim();
-            if (!val) return;
             const tb = document.getElementById('searchResultsBody');
             tb.innerHTML = '<tr><td colspan="4" style="text-align:center">Searching...</td></tr>';
             try {
                 const res = await fetch('/api/search?q=' + encodeURIComponent(val));
                 const d = await res.json();
                 tb.innerHTML = '';
-                if (!d.results.length) { tb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted)">No results.</td></tr>'; return; }
                 d.results.forEach(r => {
                     const tr = document.createElement('tr');
-                    tr.setAttribute('data-path', r.path);
-                    tr.innerHTML =
-                        '<td style="color:var(--text-primary);font-weight:600">' + r.name + '</td>' +
-                        '<td>' + r.size + '</td>' +
-                        '<td style="color:var(--text-muted)">' + r.path + '</td>' +
-                        '<td style="text-align:right"><button onclick="handleShowClick(this)" style="padding:3px 8px;font-size:10px">Show</button></td>';
+                    tr.innerHTML = `
+                        <td style="color:var(--text-primary);font-weight:600">${r.name}</td>
+                        <td>${r.size}</td>
+                        <td style="color:var(--text-muted)">${r.path}</td>
+                        <td style="text-align:right"><button onclick="openFileDirectory('${r.path}')">Show</button></td>`;
                     tb.appendChild(tr);
                 });
-            } catch(e) { document.getElementById('searchResultsBody').innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--danger)">Search failed.</td></tr>'; }
+            } catch(e) {}
         }
 
-        // ============================================================
-        //  INIT
-        // ============================================================
+        async function checkPromptWorkstation() {
+            const container = document.getElementById('tabContent-prompt');
+            try {
+                await fetch('http://localhost:9669', { mode: 'no-cors' });
+                container.innerHTML = `
+                    <div class="panel-title" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                        <span>Dynamic Prompt Workstation</span>
+                        <div style="display:flex; gap:8px;">
+                            <button onclick="checkPromptWorkstation()" style="font-size:10px; padding:2px 8px;">Refresh</button>
+                            <button onclick="killPromptWorkstation()" style="font-size:10px; padding:2px 8px; background:var(--danger); border-color:var(--danger); color:#fff;">Kill Workstation</button>
+                        </div>
+                    </div>
+                    <iframe src="http://localhost:9669" style="width:100%; height:calc(100vh - 170px); border:none; border-radius:12px; background:var(--bg-void);"></iframe>`;
+            } catch(e) {
+                container.innerHTML = `
+                    <div class="panel" style="max-width:500px; margin: 40px auto; padding: 30px; border-color:var(--border-glow);">
+                        <h3 style="color:var(--accent-celadon); font-size:16px; margin-bottom:8px; text-align:center;">Prompt Workstation</h3>
+                        <p style="color:var(--text-secondary); font-size:11px; margin-bottom:20px; line-height:1.4; text-align:center;">
+                            Ignite the local dynamic prompt workstation process.
+                        </p>
+                        
+                        <button class="btn-primary" style="width:100%; padding:10px;" onclick="bootPromptWorkstation()">Launch Prompt Workstation</button>
+                        
+                        <div style="font-size:10px; color:var(--text-muted); margin-top:15px; text-align:center;" id="autoBootStatus">Offline</div>
+                    </div>`;
+            }
+        }
+
+        async function killPromptWorkstation() {
+            if (!confirm("Are you sure you want to terminate the Prompt Workstation?")) return;
+            try {
+                const res = await fetch('/api/kill-prompt-generator', { method: 'POST' });
+                const data = await res.json();
+                showToast(data.message || 'Workstation terminated', 'var(--warning)');
+                setTimeout(checkPromptWorkstation, 1000);
+            } catch(e) {
+                showToast('Failed to kill workstation: ' + e.message, 'var(--danger)');
+            }
+        }
+
+        async function bootPromptWorkstation() {
+            const statusLabel = document.getElementById('autoBootStatus');
+            try {
+                await fetch('/api/launch-file?file=Flux%20Prompt%20Generator.lnk');
+                showToast('Launching prompt workstation silently...', 'var(--success)');
+                let attempts = 0;
+                const interval = setInterval(async () => {
+                    attempts++;
+                    if (statusLabel) statusLabel.textContent = `Connecting to server (Attempt ${attempts}/15)...`;
+                    try {
+                        await fetch('http://localhost:9669', { mode: 'no-cors' });
+                        clearInterval(interval);
+                        checkPromptWorkstation();
+                    } catch(err) {
+                        if (attempts >= 15) {
+                            clearInterval(interval);
+                            if (statusLabel) statusLabel.innerHTML = `<span style="color:var(--danger)">Startup timed out. Make sure the server runs on port 9669.</span><br><button class="btn-primary" style="margin-top:14px" onclick="checkPromptWorkstation()">Retry Connection</button>`;
+                            showToast('Workstation startup timed out', 'var(--danger)');
+                        }
+                    }
+                }, 800);
+            } catch(e) {
+                if (statusLabel) statusLabel.textContent = 'Launch execution failed: ' + e;
+                showToast('Launch failed', 'var(--danger)');
+            }
+        async function executeUlmSearch() {
+            const queryInput = document.getElementById('ulmSearchQuery');
+            const resultsDiv = document.getElementById('ulmSearchResults');
+            if (!queryInput || !resultsDiv) return;
+            const q = queryInput.value.trim();
+            if (!q) {
+                resultsDiv.innerHTML = '<div style="color:var(--danger);">Please enter a search query.</div>';
+                return;
+            }
+            resultsDiv.innerHTML = '<div style="color:var(--accent-celadon);">Querying sync_state.db...</div>';
+            try {
+                const res = await fetch(`http://127.0.0.1:8890/api/search?q=${encodeURIComponent(q)}`);
+                const data = await res.json();
+                if (data.status === 'success' && data.data) {
+                    const facts = data.data.facts || [];
+                    const metrics = data.data.metrics || [];
+                    const msgs = data.data.messages || [];
+                    let html = '';
+                    if (facts.length > 0) {
+                        html += `<div style="color:#5eead4; font-weight:bold; margin-bottom:4px;">Golden Facts (${facts.length}):</div>`;
+                        facts.slice(0, 5).forEach(f => {
+                            html += `<div style="margin-bottom:4px; padding-left:6px; border-left:2px solid #5eead4;">- ${f.fact}</div>`;
+                        });
+                    }
+                    if (metrics.length > 0) {
+                        html += `<div style="color:#d8b4fe; font-weight:bold; margin-top:6px; margin-bottom:4px;">Dev Profile (${metrics.length}):</div>`;
+                        metrics.slice(0, 5).forEach(m => {
+                            html += `<div style="margin-bottom:4px; padding-left:6px; border-left:2px solid #d8b4fe;">- [${m.name}] ${m.description}</div>`;
+                        });
+                    }
+                    if (msgs.length > 0) {
+                        html += `<div style="color:#93c5fd; font-weight:bold; margin-top:6px; margin-bottom:4px;">Raw Messages (${msgs.length}):</div>`;
+                        msgs.slice(0, 3).forEach(msg => {
+                            html += `<div style="margin-bottom:4px; padding-left:6px; border-left:2px solid #93c5fd;">- <b>${msg.role}:</b> ${msg.content.substring(0, 100)}...</div>`;
+                        });
+                    }
+                    if (!html) html = '<div style="color:var(--text-muted);">No matching memory results found.</div>';
+                    resultsDiv.innerHTML = html;
+                } else {
+                    resultsDiv.innerHTML = '<div style="color:var(--danger);">Search query failed or ULM WebUI (8890) is offline.</div>';
+                }
+            } catch(e) {
+                resultsDiv.innerHTML = `<div style="color:var(--danger);">Error querying ULM server: ${e.message}. Ensure ULM WebUI runs on port 8890.</div>`;
+            }
+        }
+    </script>
+
+    <style>
+        .modal-backdrop { display: flex !important; }
+        .modal-backdrop.hidden { display: none !important; }
+    </style>
+
+    <script>
+        // Periodically pull stats
         setInterval(fetchStats, 3000);
         setInterval(() => {
-            if (document.getElementById('tabContent-terminals').classList.contains('active')) pollTerminals();
-        }, 4000);
+            const termTab = document.getElementById('tabContent-terminals');
+            if (termTab && termTab.classList.contains('active')) pollTerminals();
+        }, 1000);
 
         fetchStats();
         fetchModels();
-        loadExplorerShortcuts();
-        fetchOllamaModels(); loadPromptBank();
+        fetchOllamaModels();
+        // Clock helper
+        setInterval(() => {
+            const clockEl = document.getElementById('headerClock');
+            if (clockEl) clockEl.textContent = new Date().toLocaleTimeString();
+        }, 1000);
     </script>
 </body>
 </html>

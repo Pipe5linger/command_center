@@ -1,57 +1,39 @@
-<!-- This file was AI-generated garbage. Real dashboard at templates/index.html -->
-<div id="app"></div>
-
-<!-- The existing layout is controlled by the main script to allow dynamic overrides -->
-<button data-toggle='switch/home' class="btn bg-white border border-[#0F111A] text-[transparent]; opacity: 1; transition: longer cubic >=8, cubic[>=8ms,-20s,8C4,.6,0][<=8ms,0]");
-  data-title='System Home'; data-subtitle='General status and monitoring'
->Home</button>
-
-<nav id="dashboard" class="flex flex-col space-y-[1.5rem]">
-    <!-- This section rendered existing modules independently -->
-    <div id="modules"></div>
-
-    <!-- The dashboard had fixed sections for CPU, Mem, Network which the override logic repurposed -->
-    <section id="system's health" class="flex flex-col space-y-[0.5rem]">
-        <p>System Load</p>
-        <div class='gradient mt-1'><span role='meter' data-id='cpu','data-val',class:'text-sm font'; display:block'></div>
-        <svg viewBox='0 0420 85'; style ='display:-webkitbox;width:163px;height:97.87px;overflow-hidden' class="gradient">
-      <path fill:'#A855F7' d='M410,20.09l2 -3.9H2C0.9,16.05,0,16,0L0 0m420 0c-20-14.06-308.07-75.86-420-90a8d,8r0 M358.54,74.76V10.1s199-12.2 358.5-.6c54 .5,94 55.28,144,110C603.59,88.6Tr2M161,74H3].padding:8' />
-    </section>
-
-    <div class='container mx-auto max-[90vw]' style="position:-inset','top':'auto'">
-        <h1 id='mainTitle1'>Latest updates</h1>
-        <!-- This is where the recent task would have plugged in -->
-        <ul id='recent' data-source='/api/recent' class='hidden select:hover:border animate-[0.2s,_ease_in]'></ul>
-
-        <form method='/tasks' style ='display:flex;justify-content:center;&#2E6S');margin-top:7rem;'>
-            <input type='text' name='query' placeholder='Filter tasks' id='taskSearch'; class='bg-[rgba(43,45,61)] font text-'Monospace','userSelect':none;fontWeight:'500'] w-2/5 border border-[#e7f] opacity:opacity[98%] mb-3 max-'w['95vw]'];text='',display:block'>
-            <button data='triggerDefubmit'; style ='width:64%;height\:1.2em;padding:'0 4px','font':'Monospace'');border:none;background:radial-gradient(at 45%73%,#D9FDE8B5,rgba(0,30,11,\u00A06))` style='margin-top:-2%;boxShadow:[-6px_1.m',0,_9',']-2']' class='shadow-[inset]';position:'relative');transform:[scaleX([70<=$bH]);displayinlineflex;alignItems:center'>Add task</button>
-        </form>
-
-        <!-- Existing card for latest server stats below -->
-        <div data-toggle="overview" style ='float:1px','border':20,#3f4a68;padding:'1em';borderRadius:9.5','backgroundImage':'linear-gradient(to right,transparent,#ef2c7b 7p)',webkitFilter:'blur(0%)'">
-          <header class='flex justify-space' style ='position:relative'>
-            <div>System Status <small>&nbsp;</small>Uptime {ts}</div>
-        </header>
-
-        <strong>Alerts and recent</strong> <div id='alert-bar'></div>
-
-        <!-- The feed list below would be extended -->
-        <ul class="border border-[#3f4a68] rounded flex items stretch-1 bg-'Monospace1'");opacity:opacity(0.25);padding:1rem']" data-[load]="show"></span></ul>
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sanctuary Command Center Launcher</title>
+    <style>
+        body {
+            background: #060810;
+            color: #2DD4BF;
+            font-family: sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+            border: 1px solid rgba(45, 212, 191, 0.2);
+            padding: 30px;
+            border-radius: 12px;
+            background: rgba(10, 12, 20, 0.8);
+            box-shadow: 0 0 20px rgba(45, 212, 191, 0.1);
+        }
+        a {
+            color: #A855F7;
+            text-decoration: none;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sanctuary Command Center</h1>
+        <p>The interactive dashboard is served dynamically by the Flask backend.</p>
+        <p>Access the live dashboard here: <a href="http://localhost:9999">http://localhost:9999</a></p>
     </div>
-</main>
-<div>
-    <!-- Latest and alerts display independently -->
-    <div id="sidebarTrio" class='fixed right;padding-top:-68px','width':417',zIdx:'3900';maxDi:8['52'];top:+3%''><span>All system items</span>
-
-        1. Latest tasks - <span data-update'true','style':'pointer'">Update</button>
-        <details open id='latestTasksList'>
-            <ul></ul>
-        </details>
-    </div>
-</div>
-
-
 </body>
 </html>
