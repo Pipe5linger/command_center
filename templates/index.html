@@ -2006,6 +2006,8 @@
                 if (statusLabel) statusLabel.textContent = 'Launch execution failed: ' + e;
                 showToast('Launch failed', 'var(--danger)');
             }
+        }
+
         async function executeUlmSearch() {
             const queryInput = document.getElementById('ulmSearchQuery');
             const resultsDiv = document.getElementById('ulmSearchResults');
