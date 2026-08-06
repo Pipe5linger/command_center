@@ -410,6 +410,7 @@ def _run_extraction(video_path, output_folder, frame_interval, dedup_threshold, 
             _extract_status["progress"] = _extract_status.get("total_frames", 0)
 
 
+import random
 from flask import send_file
 from pathlib import Path
 
@@ -422,23 +423,24 @@ def serve_latest_comfy_output():
         Path(r"D:\AI\Antigravity outputs")
     ]
     valid_exts = {".png", ".jpg", ".jpeg", ".webp"}
-    latest_file = None
-    latest_mtime = 0
+    all_files = []
 
     for cdir in candidate_dirs:
         if cdir.exists() and cdir.is_dir():
             try:
                 for entry in cdir.iterdir():
                     if entry.is_file() and entry.suffix.lower() in valid_exts:
-                        mtime = entry.stat().st_mtime
-                        if mtime > latest_mtime:
-                            latest_mtime = mtime
-                            latest_file = entry
+                        all_files.append(entry)
             except Exception:
                 continue
 
-    if latest_file:
-        return send_file(str(latest_file), mimetype='image/png')
+    if all_files:
+        chosen_file = random.choice(all_files)
+        response = send_file(str(chosen_file))
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
     return jsonify({"error": "No images found"}), 404
 
 @app.route('/')
